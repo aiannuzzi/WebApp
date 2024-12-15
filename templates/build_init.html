@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+
+{% block title %}
+Build Plans
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form action="{{ url_for('build_init', client_id=client_id) }}" method="POST">
+        {{ form.hidden_tag() }} <!-- CSRF Token -->
+    
+        <!-- Plan Overview -->
+        <div class="mb-4">
+            <h5><strong>Plan Overview</strong></h5>
+            <div class="row mb-3">
+                <!-- Start Date -->
+                <div class="col-md-6">
+                    <label for="startDate">Start Date (yyyy-mm-dd):</label>
+                    <input 
+                        type="text" 
+                        id="startDate" 
+                        name="start_date" 
+                        class="form-control" 
+                        placeholder="yyyy-mm-dd" 
+                        pattern="\d{4}-\d{2}-\d{2}" 
+                        required>
+                </div>
+        
+                <!-- End Date -->
+                <div class="col-md-6">
+                    <label for="endDate">End Date (yyyy-mm-dd):</label>
+                    <input 
+                        type="text" 
+                        id="endDate" 
+                        name="end_date" 
+                        class="form-control" 
+                        placeholder="yyyy-mm-dd" 
+                        pattern="\d{4}-\d{2}-\d{2}" 
+                        required>
+                </div>
+                
+        <!-- Current Active Plans -->
+        <h5>Current Active Plans</h5>
+        {% for plan_id, plan_name in form.active_plans.choices %}
+        <div class="form-check">
+            <input 
+                type="checkbox" 
+                class="form-check-input" 
+                id="plan{{ plan_id }}" 
+                name="active_plans" 
+                value="{{ plan_id }}" 
+                {% if plan_id in form.active_plans.data %}checked{% endif %}>
+            <label class="form-check-label" for="plan{{ plan_id }}">{{ plan_name }}</label>
+        </div>
+        {% endfor %}
+
+        <!-- Enter the Number of New Plans -->
+        <h5>Enter the number of new plans</h5>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Funding Type</th>
+                    <th>Medical/Rx</th>
+                    <th>Dental</th>
+                    <th>Vision</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Self Funded</td>
+                    <td>{{ form.self_funded_medical }}</td>
+                    <td>{{ form.self_funded_dental }}</td>
+                    <td>{{ form.self_funded_vision }}</td>
+                </tr>
+                <tr>
+                    <td>Fully Insured</td>
+                    <td>{{ form.fully_insured_medical }}</td>
+                    <td>{{ form.fully_insured_dental }}</td>
+                    <td>{{ form.fully_insured_vision }}</td>
+                </tr>
+                <tr>
+                    <td>Level Funded</td>
+                    <td>{{ form.level_funded_medical }}</td>
+                    <td>{{ form.level_funded_dental }}</td>
+                    <td>{{ form.level_funded_vision }}</td>
+                </tr>
+                <tr>
+                    <td>Minimum Premium</td>
+                    <td>{{ form.min_prem_medical }}</td>
+                    <td>{{ form.min_prem_dental }}</td>
+                    <td>{{ form.min_prem_vision }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Submit Button -->
+        <button type="submit" class="btn btn-success btn-lg">Proceed</button>
+    </form>
+
+    <p class="text-muted text-center mt-3">Please enter all necessary information before proceeding.</p>
+</div>
+{% endblock %}

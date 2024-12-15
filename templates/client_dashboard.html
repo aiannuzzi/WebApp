@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}
+Client Dashboard
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Section: Overview Cards -->
+    <div class="row text-center mb-4">
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <strong>Client Overview</strong>
+                </div>
+                <div class="card-body">
+                    <p>Client Location</p>
+                    <p>Client Status</p>
+                    <p>Business Unit</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <strong>Service Team Info</strong>
+                </div>
+                <div class="card-body">
+                    <p>Team Member #1</p>
+                    <p>Team Member #2</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-primary">
+                <div class="card-header bg-primary text-white">
+                    <strong>Report Info</strong>
+                </div>
+                <div class="card-body">
+                    <p>PMR & Delivery Date</p>
+                    <p>IBNR & Valuation Date</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+     <!-- Section: Plan Information and Effective Date Filter -->
+<div class="row mb-3">
+    <div class="col-md-6">
+        <!-- Plan Information Label and Active Only Toggle -->
+        <div class="d-flex align-items-center mb-2">
+            <h6 class="mb-0 me-3">Plan Information</h6>
+            
+        </div>
+
+        <!-- Effective Date Filter -->
+        <div class="d-flex align-items-center">
+            <label for="effectiveDate" class="me-5">Effective Date Filter:</label>
+            <input type="date" id="effectiveDate" class="form-control" value="2024-01-01" style="width: 150px; margin-left:10px;">
+        </div>
+
+
+        <div class="d-flex align-items-center">
+            <span>Active Only</span>
+            <div class="form-check form-switch">
+                <input class="form-check-input align-self-center" type="checkbox" id="activeOnlySwitch"  style="margin-top: -4.5px; margin-left:0px;">
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Build and Edit Buttons -->
+    <div class="col-md-6 d-flex justify-content-end align-items-center">
+        <a href="{{ url_for('build_init', client_id=client_id, active_plan_names=active_plan_names) }}") }}" class="btn btn-primary btn-lg">Build</a>
+        <button class="btn btn-secondary btn-lg" style="margin:2px;">Edit</button>
+    </div>
+</div>
+
+
+<div class="container mt-4">
+    <!-- Existing Overview and Filters Sections -->
+
+    <!-- Section: Plan Tables -->
+    {% for category, plans in plans.items() %}
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <h5>{{ category }}</h5>
+            <table class="table table-bordered">
+                <thead class="table-primary">
+                    <tr>
+                        <th>Plan Name</th>
+                        <th>Line of Coverage</th>
+                        <th>Funding Type</th>
+                        <th>Primary Carrier</th>
+                        <th>Rx Carrier</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if plans %}
+                        {% for plan in plans %}
+                        <tr>
+                            <td>{{ plan.PlanName }}</td>
+                            <td>{{ plan.LOC }}</td>
+                            <td>{{ plan.FundingType }}</td>
+                            <td>{{ plan.PrimaryCarrierName }}</td>
+                            <td>{{ plan.AltCarrierName or 'N/A' }}</td>
+                            <td>{{ plan.EffDate }}</td>
+                            <td>{{ plan.EndDate }}</td>
+                            <td>{{plan.Status}}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center">No plans available</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

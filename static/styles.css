@@ -1,0 +1,27 @@
+/* styles.css */
+
+/* Navbar custom styles */
+.navbar {
+    background-color: #007bff; /* Bootstrap primary color */
+}
+
+.navbar .navbar-brand {
+    font-size: 1.5rem; /* Increase font size for the brand */
+    color: #fff; /* White color for brand text */
+}
+
+.navbar .nav-link {
+    color: #fff; /* White color for link text */
+}
+
+/* Change link color on hover */
+.navbar .nav-link:hover {
+    color: #d4d4d4; /* Light grey on hover */
+}
+
+/* Add a container for consistent padding */
+.container {
+    padding: 20px; /* Add some padding to the container */
+}
+
+/* Additional styles can go here */

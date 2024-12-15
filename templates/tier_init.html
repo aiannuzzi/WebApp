@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}
+Tier Structure
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form action="{{ url_for('tier_structure', client_id=client_id) }}" method="POST">
+        {{ form.hidden_tag() }}
+
+        <!-- Tier Structures Container -->
+        <div id="tierStructuresContainer">
+            <!-- Initial Tier Structure -->
+            <div class="card mb-4 tier-structure">
+                <div class="card-body">
+                    <h3 class="tier-structure-title">Tier Structure 1</h3>
+                    
+                    <!-- Number of Tiers Dropdown -->
+                    <div class="mb-3">
+                        {{ form.number_of_tiers.label(class="form-label") }}
+                        {{ form.number_of_tiers(class="form-select") }}
+                    </div>
+
+                    <!-- Tiers Table -->
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Enrollment Tiers</th>
+                                <th>Tier Name</th>
+                                <th>Single/Family</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for tier in form.tiers %}
+                            <tr>
+                                <td>Tier {{ loop.index }}</td>
+                                <td>{{ tier.tier_name(class="form-control", placeholder="Enter Tier Option") }}</td>
+                                <td>{{ tier.single_family(class="form-control", placeholder="Single/Family") }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <!-- Plans Section -->
+                    <div class="mb-3">
+                        <h5>Plans</h5>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for plan_id, plan_name, start_date, end_date in available_plans %}
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input plan-checkbox" 
+                                    type="checkbox" 
+                                    name="selected_plans_1" 
+                                    id="plan_{{ plan_id or plan_name }}" 
+                                    value="{{ plan_id if plan_id else plan_name }}">
+                                <label class="form-check-label" for="plan_{{ plan_id or plan_name }}">
+                                    {{ plan_name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Button to Add Another Tier Structure -->
+        <div id="addTierStructureContainer" class="text-center">
+            <button id="addTierStructure" type="button" class="btn btn-success mb-4">Add Tier Structure</button>
+        </div>
+
+        <!-- Proceed Button -->
+        <div class="text-end">
+            {{ form.submit(class="btn btn-primary btn-lg") }}
+        </div>
+    </form>
+</div>
+
+<script>
+    let tierStructureCount = 1;
+
+    // Add new tier structure dynamically
+    document.getElementById('addTierStructure').addEventListener('click', function () {
+        tierStructureCount++;
+        const structureTemplate = `
+            <div class="card mb-4 tier-structure">
+                <div class="card-body">
+                    <h3 class="tier-structure-title">Tier Structure ${tierStructureCount}</h3>
+                    
+                    <!-- Number of Tiers Dropdown -->
+                    <div class="mb-3">
+                        <label for="tierCount${tierStructureCount}" class="form-label">Select number of tiers:</label>
+                        <select id="tierCount${tierStructureCount}" class="form-select tier-count-dropdown" name="tier_count_${tierStructureCount}" data-structure="${tierStructureCount}">
+                            ${[...Array(8)].map((_, i) => `<option value="${i + 1}" ${i + 1 === 8 ? 'selected' : ''}>${i + 1}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <!-- Tiers Table -->
+                    <table class="table table-sm table-bordered tier-table" data-structure="${tierStructureCount}">
+                        <thead>
+                            <tr>
+                                <th>Enrollment Tiers</th>
+                                <th>Tier Name</th>
+                                <th>Single/Family</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${[...Array(8)].map((_, i) => `
+                            <tr class="tier-row" data-tier="${i + 1}">
+                                <td>Tier ${i + 1}</td>
+                                <td>
+                                    <input 
+                                        type="text" 
+                                        name="choose_tier_${tierStructureCount}_${i + 1}" 
+                                        class="form-control form-control-sm" 
+                                        placeholder="Enter Tier Option">
+                                </td>
+                                <td>
+                                    <input 
+                                        type="text" 
+                                        name="single_family_${tierStructureCount}_${i + 1}" 
+                                        class="form-control form-control-sm" 
+                                        placeholder="Single/Family">
+                                </td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+
+                    <!-- Plans Section -->
+                    <div class="mb-3">
+                        <h5>Plans</h5>
+                        <div class="d-flex flex-wrap gap-3">
+                            {% for plan_id, plan_name, start_date, end_date in available_plans %}
+                            <div class="form-check">
+                                <input 
+                                    class="form-check-input plan-checkbox" 
+                                    type="checkbox" 
+                                    name="selected_plans_${tierStructureCount}" 
+                                    id="plan${tierStructureCount}_{{ plan_id or plan_name }}" 
+                                    value="{{ plan_id if plan_id else plan_name }}">
+                                <label class="form-check-label" for="plan${tierStructureCount}_{{ plan_id or plan_name }}">
+                                    {{ plan_name }}
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        const tierStructuresContainer = document.getElementById('tierStructuresContainer');
+        tierStructuresContainer.insertAdjacentHTML('beforeend', structureTemplate);
+
+        const addTierStructureContainer = document.getElementById('addTierStructureContainer');
+        tierStructuresContainer.appendChild(addTierStructureContainer);
+    });
+</script>
+{% endblock %}

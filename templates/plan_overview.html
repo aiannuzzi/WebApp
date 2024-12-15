@@ -1,0 +1,764 @@
+{% extends "base.html" %}
+
+{% block title %}
+Plan Overview
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <form action="{{ url_for('save_plan_overview', client_id=client_id) }}" method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <!-- Tab Navigation -->
+        <ul class="nav nav-tabs nav-tabs-scrollable" id="planTabs" role="tablist">
+            {% for plan_id, plan_info in plan_data.items() %}
+                {% set tab_id = (plan_id if plan_id else plan_info.name.replace(' ', '_')) ~ '_' ~ loop.index %}
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link {% if loop.first %}active{% endif %}" 
+                        id="tab-{{ tab_id }}" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#content-{{ tab_id }}" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="content-{{ tab_id }}" 
+                        aria-selected="{{ 'true' if loop.first else 'false' }}">
+                        {{ plan_info.name }}
+                    </button>
+                </li>
+            {% endfor %}
+
+                <!-- Group Structure Tab -->
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        id="tab-group-structure" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#content-group-structure" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="content-group-structure" 
+                        aria-selected="false">
+                        Group Structure
+                    </button>
+                </li>
+
+                <!-- Summary Tab -->
+                <li class="nav-item" role="presentation">
+                    <button 
+                        class="nav-link" 
+                        id="tab-summary" 
+                        data-bs-toggle="tab" 
+                        data-bs-target="#content-summary" 
+                        type="button" 
+                        role="tab" 
+                        aria-controls="content-summary" 
+                        aria-selected="false">
+                        Summary
+                    </button>
+                </li>
+
+
+        </ul>
+
+        <div class="tab-content" id="planTabsContent">
+            {% for plan_id, plan_info in plan_data.items() %}
+                {% set tab_id = (plan_id if plan_id else plan_info.name.replace(' ', '_')) ~ '_' ~ loop.index %}
+
+                <div 
+                    class="tab-pane fade {% if loop.first %}show active{% endif %}" 
+                    id="content-{{ tab_id }}" 
+                    role="tabpanel" 
+                    aria-labelledby="tab-{{ tab_id }}"
+                    data-start-date="{{ plan_info[2] }}"
+                    data-end-date="{{ plan_info[3] }}">
+                    
+                    <!-- Plan Overview Section -->
+                    <div class="card mt-4 mb-4">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Plan Overview - {{ plan_info.name }}</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-striped table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Plan Name</th>
+                                        <th>Line of Coverage</th>
+                                        <th>Funding Type</th>
+                                        <th>Primary Carrier</th>
+                                        <th>Alternate Carrier</th>
+                                        <th>Breakout GS?</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <!-- Plan Name -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="plan_name" 
+                                                class="form-control" 
+                                                value="{{ plan_info.name }}" 
+                                                placeholder="Enter Plan Name">
+                                        </td>
+                                        <!-- Line of Coverage -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="line_of_coverage" 
+                                                class="form-control" 
+                                                value="{{ plan_info.loc }}" 
+                                                placeholder="Enter Line of Coverage">
+                                        </td>
+                                        <!-- Funding Type -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="funding_type" 
+                                                class="form-control" 
+                                                value="{{ plan_info.funding_type }}" 
+                                                placeholder="Enter Funding Type">
+                                        </td>
+                                        <!-- Primary Carrier -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="primary_carrier" 
+                                                class="form-control" 
+                                                value="{{ plan_info.carrier }}" 
+                                                placeholder="Enter Primary Carrier">
+                                        </td>
+                                        <!-- Alternate Carrier -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="alternate_carrier" 
+                                                class="form-control" 
+                                                value="{{ plan_info.alternate_carrier if plan_info.alternate_carrier else '' }}" 
+                                                placeholder="Enter Alternate Carrier">
+                                        </td>
+                                        
+
+
+                                        <!--GS Breakout-->
+                                        <td>
+                                            <select 
+                                                name="breakout_gs" 
+                                                class="form-control" 
+                                                aria-label="Breakout GS Dropdown">
+                                                <option value="" disabled selected>Select Yes/No</option>
+                                                <option value="Yes" {% if plan_info.breakout_gs == 'Yes' %}selected{% endif %}>Yes</option>
+                                                <option value="No" {% if plan_info.breakout_gs == 'No' %}selected{% endif %}>No</option>
+                                            </select>
+                                        </td>
+                                        
+                                        
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Premiums Section -->
+                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type) %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Premiums - Monthly</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Premium Rate Description</th>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <th>Tier {{ i }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rate in plan_info.rate_combinations %}
+                                    <tr>
+                                        <td>{{ rate }}</td>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <td>
+                                                <input type="text" name="premium_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Contributions Section -->
+                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type ) %}
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Contributions - Monthly</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th> Contributions Rate Description</th>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <th>Tier {{ i }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rate in plan_info.rate_combinations %}
+                                    <tr>
+                                        <td>{{ rate }}</td>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <td>
+                                                <input type="text" name="contribution_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- HSA Section -->
+                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type) and plan_info.loc == "Medical/Rx" %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>HSA Contributions - Monthly</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th> HSA Rate Description</th>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <th>Tier {{ i }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rate in plan_info.rate_combinations %}
+                                    <tr>
+                                        <td>{{ rate }}</td>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <td>
+                                                <input type="text" name="hsa_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Level Funded Section -->
+                    {% if ("Level" in plan_info.funding_type ) %}
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Level Funded Rate Components - Monthly</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Rate Components</th>
+                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            <th>Tier {{ i }}</th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for rate_component in ["Admin Fees", "Individual Stop Loss", "Aggregate Stop Loss", "Claims Funding Budget", "Rx Rebate Offset"] %}
+                                        <tr>
+                                            <td>{{ rate_component }}</td>
+                                            {% for i in range(1, plan_info.num_tiers + 1) %}
+                                                <td>
+                                                    <input type="text" name="{{ rate_component | replace(' ', '_') }}_tier_{{ i }}" placeholder="Enter value">
+                                                </td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                                
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    
+
+                    <!-- Additional Tables -->
+                    {% if plan_info.loc == "Medical/Rx" and "Self" in plan_info.funding_type %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Self-Funded: Indivdual Stop Loss</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Carrier</th>
+                                        <th>Contract Type</th>
+                                        <th>Deductible</th>
+                                        <th>Premium PEPM</th>
+                                        <th>Accumulating Policy</th>
+                                        <th>Accumulating Deductible</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="text" name="isl_carrier_{{ tab_id }}" class="form-control" placeholder="Enter carrier"></td>
+                                        <td><input type="text" name="isl_contract_{{ tab_id }}" class="form-control" placeholder="Enter contract type"></td>
+                                        <td><input type="number" name="isl_deductible_{{ tab_id }}" class="form-control" placeholder="Enter deductible"></td>
+                                        <td><input type="number" name="isl_premium_pepm_{{ tab_id }}" class="form-control" placeholder="Enter premium PEPM"></td>
+                                        <td><input type="text" name="isl_acc_policy_{{ tab_id }}" class="form-control" placeholder="Enter accumulating policy"></td>
+                                        <td><input type="number" name="isl_acc_deductible_{{ tab_id }}" class="form-control" placeholder="Enter accumulating deductible"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Self-Funded: Aggregate Stop Loss Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Carrier</th>
+                                        <th>Expected Claim Liability</th>
+                                        <th>Maximum Claim Liability (PEPM)</th>
+                                        <th>Corridor</th>
+                                        <th>Premium PEPM</th>
+                                        <th>Maximum Reimbursement</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="text" name="asl_carrier_{{ tab_id }}" class="form-control" placeholder="Enter carrier"></td>
+                                        <td><input type="number" name="asl_expected_claim_{{ tab_id }}" class="form-control" placeholder="Enter expected claim"></td>
+                                        <td><input type="number" name="asl_max_claim_{{ tab_id }}" class="form-control" placeholder="Enter maximum claim"></td>
+                                        <td><input type="number" name="asl_corridor_{{ tab_id }}" class="form-control" placeholder="Enter corridor" min="0" max="100"></td>
+                                        <td><input type="number" name="asl_premium_pepm_{{ tab_id }}" class="form-control" placeholder="Enter premium PEPM"></td>
+                                        <td><input type="number" name="asl_max_reimbursement_{{ tab_id }}" class="form-control" placeholder="Enter max reimbursement"></td>
+                                    </tr>
+                                </tbody>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if "Self" in plan_info.funding_type%}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Self-Funded: Fees</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Category</th>
+                                        <th>Description</th>
+                                        <th>PEPM Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="text" name="fees_category_{{ tab_id }}" class="form-control" placeholder="Enter category"></td>
+                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Enter description"></td>
+                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Enter PEPM amount"></td>
+                                    </tr>
+                                </tbody>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if "Fully" in plan_info.funding_type and plan_info.loc=="Medical/Rx" %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Additional Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        
+                                        
+                                        <th>Pooling Level</th>
+                                        <th>Pooling Fee PEPM</th>
+                                        <th>Rx Rebate Offset</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        
+                                        <td><input type="text" name="pooling_level_{{ tab_id }}" class="form-control" placeholder="Pooling Level"></td>
+                                        <td><input type="number" name="pooling_fees_{{ tab_id }}" class="form-control" placeholder="Pooling Fee PEPM"></td>
+                                        <td><input type="number" name="rebate_offset_{{ tab_id }}" class="form-control" placeholder="Rx Rebate Offset"></td>
+                                    </tr>
+                                </tbody>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if plan_info.funding_type == "Fully-Insured" %}
+                    <div class="card mb-4">
+                        <div class="card-header bg-secondary text-white">
+                            <h5>Additional Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-bordered">
+                                <thead>
+                                    <tr>
+                                        
+                                        <th>Calculated Budget</th>
+                                        <th>Retention PEPM</th>
+                                        <th>Claims Funding PEPM</th>
+                                        <th>Rx Rebate Offset</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        
+                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Calculated Budget"></td>
+                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Retention PEPM"></td>
+                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Claims Funding PEPM"></td>
+                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Rx Rebate Offset"></td>
+                                    </tr>
+                                </tbody>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+
+            <!-- Group Structure Tab Content -->
+            <div 
+                class="tab-pane fade" 
+                id="content-group-structure" 
+                role="tabpanel" 
+                aria-labelledby="tab-group-structure">
+                <div class="card mt-4 mb-4">
+                    
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">Group Structure</h5>
+                    </div>
+                    <div class="card-body">
+                        <table id="group-structure-table" class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Plan Name</th>
+                                    <th>Structure 1</th>
+                                    <th>Structure 2</th>
+                                    <th>Structure 3</th>
+                                    <th>Rate Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Auto-populated rows (added dynamically via JavaScript if Breakout GS is "No") -->
+                            </tbody>
+                        </table>
+                        <!-- Add Rows Button -->
+                        <button id="add-row-btn" class="btn btn-primary mt-3">Add Row</button>
+                    </div>
+                   
+                </div>
+            </div>
+
+            <!-- Summary Tab Content -->
+            <div class="tab-pane fade" id="content-summary" role="tabpanel" aria-labelledby="tab-summary">
+                <div class="card mt-4 mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5>Summary</h5>
+                    </div>
+                    <div class="card-body" id="summary-content">
+                        <!-- Placeholder for dynamic summary -->
+                        <p>No data entered yet.</p>
+                    </div>
+                </div>
+            </div>
+        
+
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-end mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">Save & Proceed</button>
+        </div>
+    </form>
+</div>
+
+
+<script>
+    <!--Summary Tab Info-->
+    document.addEventListener('DOMContentLoaded', () => {
+        const summaryContent = document.getElementById('summary-content');
+        const groupStructureTable = document.getElementById('group-structure-table').querySelector('tbody');
+        const addRowBtn = document.getElementById('add-row-btn');
+    
+    
+        // Function to update the summary tab content
+        const updateSummary = () => {
+            // Clear the summary content
+            summaryContent.innerHTML = '';
+    
+            // Get all tabs except the Summary tab
+            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
+    
+            tabs.forEach(tab => {
+                const tabId = tab.id;
+                const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
+    
+                // Add a header for the tab name
+                const section = document.createElement('div');
+                section.innerHTML = `<h5>${tabName}</h5>`;
+                summaryContent.appendChild(section);
+    
+                // Find all tables in this tab
+                const tables = tab.querySelectorAll('table');
+    
+                tables.forEach(table => {
+                    // Clone the table structure
+                    const clonedTable = table.cloneNode(true);
+    
+                    // Replace input fields with their current values
+                    const inputs = clonedTable.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const cell = input.parentElement;
+                        const value = input.value.trim();
+                        cell.textContent = value || 'Enter value'; // Replace input field with its value
+                    });
+    
+                    // Append the cloned table to the Summary tab
+                    section.appendChild(clonedTable);
+                });
+            });
+    
+            // Display a message if no data is entered
+            if (summaryContent.innerHTML.trim() === '') {
+                summaryContent.innerHTML = '<p>No data entered yet.</p>';
+            }
+        };
+    
+        <!--Group Structure Table-->
+        // Function to auto-populate rows for the Group Structure table
+        const autoPopulateRow = (plan) => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="text" name="plan_name" class="form-control" value="${plan.name}" required>
+                </td>
+                <td>
+                    <input type="text" name="structure_1" class="form-control" value="${plan.name} ${new Date(plan.startDate).getFullYear()}" required>
+                </td>
+                <td>
+                    <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
+                </td>
+                <td>
+                    <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
+                </td>
+                <td>
+                    <input type="text" name="rate_description" class="form-control" value="${plan.rateDescriptions[0]}" required>
+                </td>
+            `;
+            groupStructureTable.appendChild(row);
+        };
+    
+    
+    
+        // Function to handle Breakout GS changes
+        const handleBreakoutGsChange = (event) => {
+            const dropdown = event.target;
+            const selectedValue = dropdown.value;
+        
+            if (selectedValue === "No") {
+                // Identify the parent tab or container to locate the specific plan
+                const parentTab = dropdown.closest('.tab-pane');
+                const tabId = parentTab.id;
+        
+                // Use the tab ID to locate the corresponding plan data
+                const planNameInput = parentTab.querySelector('input[name="plan_name"]');
+                const planName = planNameInput ? planNameInput.value.trim() : null;
+        
+                // Extract rate description and start date from the premium or contributions section
+                const firstRateDescription = parentTab.querySelector('.table tbody tr td:first-child');
+                const rateDescription = firstRateDescription ? firstRateDescription.textContent.trim() : "Unknown Rate";
+        
+                // Retrieve the start date from the tab's data attribute
+                const startDateText = parentTab.getAttribute('data-start-date')?.trim();
+                const startDate = startDateText ? new Date(`${startDateText}T00:00:00`) : new Date();
+                
+              
+                
+                
+        
+                
+                
+        
+                if (planName) {
+                    // Format the year for Structure 1
+                    const year = startDate.getFullYear();
+                    
+                    // Auto-populate the Group Structure table
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>
+                            <input type="text" name="plan_name" class="form-control" value="${planName}" required>
+                        </td>
+                        <td>
+                            <input type="text" name="structure_1" class="form-control" value="${planName} ${year}" required>
+                        </td>
+                        <td>
+                            <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
+                        </td>
+                        <td>
+                            <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
+                        </td>
+                        <td>
+                            <input type="text" name="rate_description" class="form-control" value="${rateDescription}" required>
+                        </td>
+                    `;
+                    groupStructureTable.appendChild(row);
+                } else {
+                    alert("Plan Name not found for this tab!");
+                }
+            }
+        
+    
+            // Update the summary after changes
+            updateSummary();
+        };
+    
+        // Add event listeners to all Breakout GS dropdowns
+        document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
+            dropdown.addEventListener('change', handleBreakoutGsChange);
+        });
+    
+        // Add Row Button functionality
+        addRowBtn.addEventListener('click', () => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="text" name="plan_name" class="form-control" placeholder="Enter Plan Name" required>
+                </td>
+                <td>
+                    <input type="text" name="structure_1" class="form-control" placeholder="Enter Structure 1">
+                </td>
+                <td>
+                    <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
+                </td>
+                <td>
+                    <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
+                </td>
+                <td>
+                    <input type="text" name="rate_description" class="form-control" placeholder="Enter Rate Description" required>
+                </td>
+            `;
+            groupStructureTable.appendChild(row);
+    
+            // Update the summary after changes
+            updateSummary();
+        });
+    
+        // Listen for real-time changes in all inputs
+        const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
+        inputs.forEach(input => {
+            input.addEventListener('input', updateSummary);
+        });
+    
+        // Initial summary update
+        updateSummary();
+    
+        // Ensure initial blank rows
+        ensureBlankRows();
+    });
+    
+        
+    
+</script>
+
+
+<!-- Additional CSS for Styling -->
+<style>
+    .nav-tabs .nav-link {
+        font-weight: bold;
+    }
+    .card {
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .card-header {
+        border-bottom: 2px solid #ddd;
+    }
+    table.table {
+        margin: 0;
+        border: 1px solid #ccc;
+    }
+    table.table th, table.table td {
+        text-align: center;
+        vertical-align: middle;
+    }
+    .form-control-sm {
+        padding: 0.375rem 0.5rem;
+    }
+
+    /* Add spacing between sections (tab groups) */
+    #summary-content > div {
+        margin-bottom: 2rem; /* Space between tables from different tabs */
+        padding: 1rem; /* Add padding to the section */
+        border: 1px solid #ddd; /* Add a subtle border for better separation */
+        border-radius: 8px;
+        background-color: #f9f9f9; /* Light background for distinction */
+    }
+
+    /* Style for section headers (tab names) */
+    #summary-content > div h5 {
+        margin-bottom: 1rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    /* Style for summary tables */
+    #summary-content table {
+        width: 100%;
+        margin-bottom: 1rem;
+        border-collapse: collapse;
+        border-spacing: 0;
+        background-color: #fff;
+    }
+
+    #summary-content table th,
+    #summary-content table td {
+        padding: 0.75rem;
+        text-align: center;
+        border: 1px solid #ddd;
+    }
+
+    #summary-content table th {
+        background-color: #f0f0f0;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
