@@ -42,16 +42,16 @@ Rate Structure
                     <div class="mb-3">
                         <h5>Plans</h5>
                         <div class="d-flex flex-wrap gap-3">
-                            {% for plan_id, plan_name, start_date, end_date in available_plans %}
+                            {% for plan in available_plans %}
                             <div class="form-check">
                                 <input 
                                     class="form-check-input" 
                                     type="checkbox" 
                                     name="rate_structures-{{ rate_form.name.split('-')[1] }}-plans" 
-                                    id="plan_{{ rate_form.name.split('-')[1] }}_{{ plan_id or plan_name }}" 
-                                    value="{{ plan_id if plan_id else plan_name }}">
-                                <label class="form-check-label" for="plan_{{ rate_form.name.split('-')[1] }}_{{ plan_id or plan_name }}">
-                                    {{ plan_name }}
+                                    id="plan_{{ rate_form.name.split('-')[1] }}_{{ plan.PlanId or plan.PlanName }}" 
+                                    value="{{ plan.PlanId if plan.PlanId else plan.PlanName }}">
+                                <label class="form-check-label" for="plan_{{ rate_form.name.split('-')[1] }}_{{ plan.PlanId or plan.PlanName }}">
+                                    {{ plan.PlanName }}
                                 </label>
                             </div>
                             {% endfor %}
@@ -118,16 +118,16 @@ Rate Structure
                     <div class="mb-3">
                         <h5>Plans</h5>
                         <div class="d-flex flex-wrap gap-3">
-                            {% for plan_id, plan_name,_,_ in available_plans %}
+                            {% for plan in available_plans %}
                             <div class="form-check">
                                 <input 
                                     class="form-check-input" 
                                     type="checkbox" 
                                     name="rate_structures-${rateStructureCount - 1}-plans" 
-                                    id="plan_${rateStructureCount - 1}_{{ plan_id or plan_name }}" 
-                                    value="{{ plan_id if plan_id else plan_name }}">
-                                <label class="form-check-label" for="plan_${rateStructureCount - 1}_{{ plan_id or plan_name }}">
-                                    {{ plan_name }}
+                                    id="plan_${rateStructureCount - 1}_{{ plan.PlanId or plan.PlanName }}" 
+                                    value="{{ plan.PlanId if plan.PlanId else plan.PlanName }}">
+                                <label class="form-check-label" for="plan_${rateStructureCount - 1}_{{ plan.PlanId or plan.PlanName }}">
+                                    {{ plan.PlanName }}
                                 </label>
                             </div>
                             {% endfor %}

@@ -23,7 +23,7 @@ Plan Overview
                         role="tab" 
                         aria-controls="content-{{ tab_id }}" 
                         aria-selected="{{ 'true' if loop.first else 'false' }}">
-                        {{ plan_info.name }}
+                        {{ plan_info['name'] }}
                     </button>
                 </li>
             {% endfor %}
@@ -70,8 +70,8 @@ Plan Overview
                     id="content-{{ tab_id }}" 
                     role="tabpanel" 
                     aria-labelledby="tab-{{ tab_id }}"
-                    data-start-date="{{ plan_info[2] }}"
-                    data-end-date="{{ plan_info[3] }}">
+                    data-start-date="{{ plan_info.get('start_date', 'N/A') }}"
+                    data-end-date="{{ plan_info.get('end_date', 'N/A') }}">
                     
                     <!-- Plan Overview Section -->
                     <div class="card mt-4 mb-4">
@@ -160,7 +160,7 @@ Plan Overview
                     </div>
 
                     <!-- Premiums Section -->
-                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type) %}
+                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type']) %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Premiums - Monthly</h5>
@@ -170,16 +170,16 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th>Premium Rate Description</th>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <th>Tier {{ i }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for rate in plan_info.rate_combinations %}
+                                    {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
                                                 <input type="text" name="premium_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
                                             </td>
@@ -193,7 +193,7 @@ Plan Overview
                     {% endif %}
 
                     <!-- Contributions Section -->
-                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type ) %}
+                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] ) %}
 
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
@@ -204,16 +204,16 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th> Contributions Rate Description</th>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <th>Tier {{ i }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for rate in plan_info.rate_combinations %}
+                                    {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
                                                 <input type="text" name="contribution_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
                                             </td>
@@ -227,7 +227,7 @@ Plan Overview
                     {% endif %}
                     
                     <!-- HSA Section -->
-                    {% if ("Self" in plan_info.funding_type or "Fully" in plan_info.funding_type or "Level" in plan_info.funding_type) and plan_info.loc == "Medical/Rx" %}
+                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type']) and plan_info.loc == "Medical/Rx" %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>HSA Contributions - Monthly</h5>
@@ -237,16 +237,16 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th> HSA Rate Description</th>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <th>Tier {{ i }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for rate in plan_info.rate_combinations %}
+                                    {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
                                                 <input type="text" name="hsa_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
                                             </td>
@@ -260,7 +260,7 @@ Plan Overview
                     {% endif %}
 
                     <!-- Level Funded Section -->
-                    {% if ("Level" in plan_info.funding_type ) %}
+                    {% if ("Level" in plan_info['funding_type'] ) %}
 
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
@@ -271,7 +271,7 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th>Rate Components</th>
-                                        {% for i in range(1, plan_info.num_tiers + 1) %}
+                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <th>Tier {{ i }}</th>
                                         {% endfor %}
                                     </tr>
@@ -280,7 +280,7 @@ Plan Overview
                                     {% for rate_component in ["Admin Fees", "Individual Stop Loss", "Aggregate Stop Loss", "Claims Funding Budget", "Rx Rebate Offset"] %}
                                         <tr>
                                             <td>{{ rate_component }}</td>
-                                            {% for i in range(1, plan_info.num_tiers + 1) %}
+                                            {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                                 <td>
                                                     <input type="text" name="{{ rate_component | replace(' ', '_') }}_tier_{{ i }}" placeholder="Enter value">
                                                 </td>
@@ -297,7 +297,7 @@ Plan Overview
                     
 
                     <!-- Additional Tables -->
-                    {% if plan_info.loc == "Medical/Rx" and "Self" in plan_info.funding_type %}
+                    {% if plan_info['loc'] == "Medical/Rx" and "Self" in plan_info['funding_type'] %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Self-Funded: Indivdual Stop Loss</h5>
@@ -361,7 +361,7 @@ Plan Overview
                     </div>
                     {% endif %}
 
-                    {% if "Self" in plan_info.funding_type%}
+                    {% if "Self" in plan_info['funding_type']%}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Self-Funded: Fees</h5>
@@ -389,7 +389,7 @@ Plan Overview
                     </div>
                     {% endif %}
 
-                    {% if "Fully" in plan_info.funding_type and plan_info.loc=="Medical/Rx" %}
+                    {% if "Fully" in plan_info['funding_type'] and plan_info['loc']=="Medical/Rx" %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Additional Details</h5>
@@ -420,7 +420,7 @@ Plan Overview
                     </div>
                     {% endif %}
 
-                    {% if plan_info.funding_type == "Fully-Insured" %}
+                    {% if plan_info['funding_type'] == "Fully-Insured" %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Additional Details</h5>

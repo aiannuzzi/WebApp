@@ -55,7 +55,15 @@ def client_dashboard(client_id):
     # Filter active plans (only those with Status = Active)
     active_plans ={"Active": [plan for plan in plans if plan['Status'] == 'Active']}
     
-    active_plan_names = [(plan['PlanId'], plan['PlanName']) for plan in active_plans['Active']]
+    active_plan_names = [
+        {
+            'PlanId': plan['PlanId'],
+            'PlanName': plan['PlanName'],
+            'StartDate': None,
+            'EndDate': None
+        }
+        for plan in active_plans['Active']
+    ]
 
     session['active_plan_names']=active_plan_names
 
@@ -78,7 +86,7 @@ def build_init(client_id):
         form.active_plans.data = []
     
     # Dynamically populate the active plan choices
-    form.active_plans.choices = [(plan_id, plan_name) for plan_id, plan_name in active_plans]
+    form.active_plans.choices = [(plan['PlanId'], plan['PlanName']) for plan in active_plans]
 
     # Handle form submission
     if form.validate_on_submit():
@@ -95,14 +103,14 @@ def build_init(client_id):
 
         # Filter active plans to only include those selected by the user
         selected_active_plans = [
-            (
-                plan_id,               # plan_id
-                plan_name,             # plan_name
-                str(start_date),       # start_date as string
-                str(end_date)          # end_date as string
-            )
-            for (plan_id, plan_name) in active_plans
-            if plan_id in selected_active_plan_ids
+            {
+                'PlanId': plan['PlanId'],
+                'PlanName': plan['PlanName'],
+                'StartDate': str(start_date),  # Convert to string if necessary
+                'EndDate': str(end_date)       # Convert to string if necessary
+            }
+            for plan in active_plans
+            if plan['PlanId'] in selected_active_plan_ids
         ]
         
         
@@ -156,7 +164,13 @@ def build_init(client_id):
         
         # Update available_plans to include generated plans in the desired format
         for plan in generated_plans:
-            available_plans.append((None, plan['name'],plan['start_date'],plan['end_date']))
+            available_plans.append({
+            'PlanId': None,  # Placeholder for new plans
+            'PlanName': plan['name'],
+            'StartDate': plan['start_date'],
+            'EndDate': plan['end_date']
+        })
+
         
 
         # Store data in session for the next page
@@ -253,7 +267,7 @@ def tier_structure(client_id):
 
         # Save the tier data to the session
         session['tier_data'] = dict(plan_tier_data)
-        
+        print(plan_tier_data)
 
         return redirect(url_for('rate_structure', client_id=client_id))
 
@@ -274,11 +288,12 @@ def rate_structure(client_id):
 
     # Dynamically populate choices for `selected_plans`
     plan_choices = [
-        (str(plan_id) if plan_id else plan_name, plan_name)
-        for plan_id, plan_name,start_date,end_date in available_plans
+    (str(plan['PlanId']) if plan['PlanId'] else plan['PlanName'], plan['PlanName'])
+    for plan in available_plans
     ]
     for rate_form in form.rate_structures.entries:
         rate_form.selected_plans.choices = plan_choices
+
 
     if request.method == 'POST':
         from collections import defaultdict
@@ -310,42 +325,39 @@ def rate_structure(client_id):
                         rate_name = value.strip()
                         if rate_name:  # Only add rate structures with a valid name
                             rate_data[index]["rate_name"] = rate_name
+                            print(f"Set rate_name for index {index}: {rate_name}")
 
                     # Process summary_options
                     elif "summary_options" in field_name:
                         if value.strip():
                             rate_data[index]["options"].append(value.strip())
+                            print(f"Added summary_option for index {index}: {value.strip()}")
 
                     # Process plans
                     elif field_name == "plans":
-                        # Use getlist to capture all values for this key
-                        selected_plans = request.form.getlist(key)
+                        selected_plans = request.form.getlist(key)  # Capture all selected plans
                         print(f"Selected Plans for {key}: {selected_plans}")  # Debugging
+
                         for selected_plan in selected_plans:
-                            # Determine if the plan is a valid ID or name
+                            # Match selected_plan with available_plans
                             linked_plan = None
-                            for plan_id, plan_name,start_date,end_date in available_plans:
-                                if str(plan_id) == selected_plan:
-                                    linked_plan = plan_id  # Valid plan ID
+                            for plan in available_plans:
+                                if str(plan['PlanId']) == selected_plan:
+                                    linked_plan = plan['PlanId']
                                     break
-                                elif plan_name == selected_plan:
-                                    linked_plan = plan_name  # Auto-generated name
+                                elif plan['PlanName'] == selected_plan:
+                                    linked_plan = plan['PlanName']
                                     break
 
-                            # Debugging: Log the linked plan
-                            print(f"Linked Plan: {linked_plan}")
-
-                            # Add the linked plan to the rate structure
-                            if linked_plan:
+                            if linked_plan is not None:
                                 rate_data[index]["plans"].append(linked_plan)
+                                print(f"Linked Plan for index {index}: {linked_plan}")
 
-        # Filter out completely empty rate structures
-        rate_data = {k: v for k, v in rate_data.items() if v["rate_name"]}
 
         
         # Save the rate data to the session or database
         session['rate_data'] = rate_data
-        
+        print(rate_data)
 
         # Redirect to the next page or overview
         return redirect(url_for('plan_overview', client_id=client_id))
@@ -378,32 +390,44 @@ def plan_overview(client_id):
     
     
     # Combine active plans and generated plans into one loop
-    for plan_id, plan_name, _,_ in active_plans:
-        if plan_id is not None:
-            # Fetch details for existing plans from the database
-            plan = supabase.table('Plan').select('PlanName', 'FundingType', 'LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
-            if plan.data:
-                plan_data[plan_id] = {
-                    'name': plan.data[0]['PlanName'],
-                    'funding_type': plan.data[0]['FundingType'],
-                    'loc': plan.data[0]['LOC'],
-                    'carrier': plan.data[0]['PrimaryCarrierName'],
-                    
-                }
-        else:
-            # For new plans, fetch details from generated_plans
-            matching_generated_plan = next((p for p in generated_plans if p['name'] == plan_name), None)
-            if matching_generated_plan:
-                plan_data[plan_name] = {
-                    'name': matching_generated_plan['name'],
-                    'funding_type': matching_generated_plan['funding_type'],
-                    'loc': matching_generated_plan['coverage'],
-                }
+    for plan in active_plans:
+            plan_id = plan['PlanId']
+            plan_name = plan['PlanName']
+            start_date=plan.get('StartDate')
+            end_date=plan.get('EndDate')
+
+            if plan_id is not None:
+                # Fetch details for existing plans from the database
+                plan_query = supabase.table('Plan').select('PlanName', 'FundingType', 'LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
+                if plan_query.data:
+                    plan_data[plan_id] = {
+                        'name': plan_query.data[0]['PlanName'],
+                        'funding_type': plan_query.data[0]['FundingType'],
+                        'loc': plan_query.data[0]['LOC'],
+                        'carrier': plan_query.data[0]['PrimaryCarrierName'],
+                        'start_date': start_date,
+                        'end_date': end_date
+                    }
+            else:
+                # For new plans, fetch details from generated_plans
+                matching_generated_plan = next((p for p in generated_plans if p['name'] == plan_name), None)
+                if matching_generated_plan:
+                    plan_data[plan_name] = {
+                        'name': matching_generated_plan['name'],
+                        'funding_type': matching_generated_plan['funding_type'],
+                        'loc': matching_generated_plan['coverage'],
+                        'start_date': start_date,
+                        'end_date': end_date
+                    }
+
 
     # Map tier data to plans
     for structure_id, structure_info in tier_data.items():
         for plan_id in structure_info.get('plans', []):
-            plan_id = int(plan_id) if plan_id.isdigit() else plan_id  # Handle both integers and string names
+            # Handle both integers and string names
+            plan_id = int(plan_id) if isinstance(plan_id, str) and plan_id.isdigit() else plan_id
+
+            # Get the number of tiers for this structure
             num_tiers = structure_info.get('tier_count', 0)
 
             # Update or initialize the plan_data entry for num_tiers
@@ -417,6 +441,8 @@ def plan_overview(client_id):
                     "funding_type": None,
                     "loc": None,
                     "carrier": None,
+                    "start_date": None,
+                    "end_date": None,
                     "rate_combinations": [],
                 }
 
@@ -431,6 +457,8 @@ def plan_overview(client_id):
             "/".join(combo) for combo in product(*rate_names)
         ]
 
+
+    print(plan_data)
     
     # Render the template
     return render_template(
