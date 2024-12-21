@@ -22,7 +22,10 @@ Plan Overview
                         type="button" 
                         role="tab" 
                         aria-controls="content-{{ tab_id }}" 
-                        aria-selected="{{ 'true' if loop.first else 'false' }}">
+                        aria-selected="{{ 'true' if loop.first else 'false' }}"
+                        data-plan-name="{{ plan_info['name'] }}"
+                        data-start-date="{{ plan_info.get('start_date', 'N/A') }}"
+                        data-end-date="{{ plan_info.get('end_date', 'N/A') }}">
                         {{ plan_info['name'] }}
                     </button>
                 </li>
@@ -71,7 +74,9 @@ Plan Overview
                     role="tabpanel" 
                     aria-labelledby="tab-{{ tab_id }}"
                     data-start-date="{{ plan_info.get('start_date', 'N/A') }}"
-                    data-end-date="{{ plan_info.get('end_date', 'N/A') }}">
+                    data-end-date="{{ plan_info.get('end_date', 'N/A') }}"
+                    data-rate-combinations="{{ plan_info.get('rate_combinations', 'N/A') }}"
+                    >
                     
                     <!-- Plan Overview Section -->
                     <div class="card mt-4 mb-4">
@@ -512,156 +517,185 @@ Plan Overview
 
 
 <script>
-    <!--Summary Tab Info-->
-    document.addEventListener('DOMContentLoaded', () => {
-        const summaryContent = document.getElementById('summary-content');
-        const groupStructureTable = document.getElementById('group-structure-table').querySelector('tbody');
-        const addRowBtn = document.getElementById('add-row-btn');
-    
-    
-        // Function to update the summary tab content
-        const updateSummary = () => {
-            // Clear the summary content
-            summaryContent.innerHTML = '';
-    
-            // Get all tabs except the Summary tab
-            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
-    
-            tabs.forEach(tab => {
-                const tabId = tab.id;
-                const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
-    
-                // Add a header for the tab name
-                const section = document.createElement('div');
-                section.innerHTML = `<h5>${tabName}</h5>`;
-                summaryContent.appendChild(section);
-    
-                // Find all tables in this tab
-                const tables = tab.querySelectorAll('table');
-    
-                tables.forEach(table => {
-                    // Clone the table structure
-                    const clonedTable = table.cloneNode(true);
-    
-                    // Replace input fields with their current values
-                    const inputs = clonedTable.querySelectorAll('input');
-                    inputs.forEach(input => {
-                        const cell = input.parentElement;
-                        const value = input.value.trim();
-                        cell.textContent = value || 'Enter value'; // Replace input field with its value
-                    });
-    
-                    // Append the cloned table to the Summary tab
-                    section.appendChild(clonedTable);
+document.addEventListener('DOMContentLoaded', () => {
+    const summaryContent = document.getElementById('summary-content');
+    const groupStructureTable = document.getElementById('group-structure-table').querySelector('tbody');
+    const addRowBtn = document.getElementById('add-row-btn');
+
+    // Function to update the summary tab content
+    const updateSummary = () => {
+        summaryContent.innerHTML = '';
+        const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
+        tabs.forEach(tab => {
+            const tabId = tab.id;
+            const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
+            const section = document.createElement('div');
+            section.innerHTML = `<h5>${tabName}</h5>`;
+            summaryContent.appendChild(section);
+            const tables = tab.querySelectorAll('table');
+            tables.forEach(table => {
+                const clonedTable = table.cloneNode(true);
+                clonedTable.querySelectorAll('input').forEach(input => {
+                    const cell = input.parentElement;
+                    const value = input.value.trim();
+                    cell.textContent = value || 'Enter value';
                 });
+                section.appendChild(clonedTable);
             });
-    
-            // Display a message if no data is entered
-            if (summaryContent.innerHTML.trim() === '') {
-                summaryContent.innerHTML = '<p>No data entered yet.</p>';
-            }
-        };
-    
-        <!--Group Structure Table-->
-        // Function to auto-populate rows for the Group Structure table
-        const autoPopulateRow = (plan) => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <input type="text" name="plan_name" class="form-control" value="${plan.name}" required>
-                </td>
-                <td>
-                    <input type="text" name="structure_1" class="form-control" value="${plan.name} ${new Date(plan.startDate).getFullYear()}" required>
-                </td>
-                <td>
-                    <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
-                </td>
-                <td>
-                    <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
-                </td>
-                <td>
-                    <input type="text" name="rate_description" class="form-control" value="${plan.rateDescriptions[0]}" required>
-                </td>
-            `;
-            groupStructureTable.appendChild(row);
-        };
-    
-    
-    
-        // Function to handle Breakout GS changes
-        const handleBreakoutGsChange = (event) => {
-            const dropdown = event.target;
-            const selectedValue = dropdown.value;
-        
-            if (selectedValue === "No") {
-                // Identify the parent tab or container to locate the specific plan
-                const parentTab = dropdown.closest('.tab-pane');
-                const tabId = parentTab.id;
-        
-                // Use the tab ID to locate the corresponding plan data
-                const planNameInput = parentTab.querySelector('input[name="plan_name"]');
-                const planName = planNameInput ? planNameInput.value.trim() : null;
-        
-                // Extract rate description and start date from the premium or contributions section
-                const firstRateDescription = parentTab.querySelector('.table tbody tr td:first-child');
-                const rateDescription = firstRateDescription ? firstRateDescription.textContent.trim() : "Unknown Rate";
-        
-                // Retrieve the start date from the tab's data attribute
-                const startDateText = parentTab.getAttribute('data-start-date')?.trim();
-                const startDate = startDateText ? new Date(`${startDateText}T00:00:00`) : new Date();
-                
-              
-                
-                
-        
-                
-                
-        
-                if (planName) {
-                    // Format the year for Structure 1
-                    const year = startDate.getFullYear();
-                    
-                    // Auto-populate the Group Structure table
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>
-                            <input type="text" name="plan_name" class="form-control" value="${planName}" required>
-                        </td>
-                        <td>
-                            <input type="text" name="structure_1" class="form-control" value="${planName} ${year}" required>
-                        </td>
-                        <td>
-                            <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
-                        </td>
-                        <td>
-                            <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
-                        </td>
-                        <td>
-                            <input type="text" name="rate_description" class="form-control" value="${rateDescription}" required>
-                        </td>
-                    `;
-                    groupStructureTable.appendChild(row);
-                } else {
-                    alert("Plan Name not found for this tab!");
-                }
-            }
-        
-    
-            // Update the summary after changes
-            updateSummary();
-        };
-    
-        // Add event listeners to all Breakout GS dropdowns
-        document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
-            dropdown.addEventListener('change', handleBreakoutGsChange);
         });
+        if (summaryContent.innerHTML.trim() === '') {
+            summaryContent.innerHTML = '<p>No data entered yet.</p>';
+        }
+    };
+
+    // Function to create plan name dropdown options
+    const createPlanNameOptions = () => {
+        return Array.from(document.querySelectorAll('.nav-link[data-plan-name]'))
+            .map(button => {
+                const planName = button.getAttribute('data-plan-name');
+                return planName ? `<option value="${planName}">${planName}</option>` : '';
+            })
+            .join('');
+    };
+
+    // Parse and clean rate combinations
+    const parseRateCombinations = (rateCombinationsString) => {
+        if (Array.isArray(rateCombinationsString)) {
+            return rateCombinationsString.map(rate => rate.trim());
+        }
+        if (typeof rateCombinationsString === 'string') {
+            return rateCombinationsString
+                .replace(/\[|\]|'/g, '') // Remove brackets and single quotes
+                .split(',')
+                .map(rate => rate.trim()); // Split by comma and trim whitespace
+        }
+        return []; // Return an empty array if the input is invalid
+    };
     
-        // Add Row Button functionality
-        addRowBtn.addEventListener('click', () => {
+
+    // Function to auto-populate rows for the Group Structure table
+    const autoPopulateRow = (plan) => {
+        const cleanedRateDescriptions = parseRateCombinations(plan.rateDescriptions);
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="plan_name" class="form-control plan-name" required>
+                    <option value="">Select Plan</option>
+                    ${createPlanNameOptions()}
+                </select>
+            </td>
+            <td>
+                <input type="text" name="structure_1" class="form-control" value="${plan.name} ${new Date(plan.startDate).getFullYear()}" required>
+            </td>
+            <td>
+                <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
+            </td>
+            <td>
+                <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
+            </td>
+            <td>
+                <select name="rate_description" class="form-control rate-description">
+                    <option value="">Select Rate Description</option>
+                    ${cleanedRateDescriptions.map(rate => `<option value="${rate}">${rate}</option>`).join('')}
+                </select>
+            </td>
+        `;
+        groupStructureTable.appendChild(row);
+        const planDropdown = row.querySelector('.plan-name');
+        if (planDropdown && plan.name) {
+            planDropdown.value = plan.name;
+        }
+    };
+
+    // Function to handle Breakout GS changes
+    const handleBreakoutGsChange = (event) => {
+        const dropdown = event.target;
+        const selectedValue = dropdown.value;
+        
+        console.log("Dropdown changed, selected value:", selectedValue);
+
+        if (selectedValue === "No") {
+            const parentTab = dropdown.closest('.tab-pane');
+            const tabId = parentTab.id;
+            console.log("Parent tab detected:", parentTab);
+
+            // Get plan name from the associated tab
+            const planName = document.querySelector(`[aria-controls="${tabId}"]`).getAttribute('data-plan-name') || "";
+    
+            // Normalize the start date
+            const rawStartDate = parentTab.getAttribute('data-start-date') || "";
+            const normalizedStartDate = rawStartDate 
+                ? new Date(`${rawStartDate}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC' }) 
+                : "";
+    
+            // Parse and clean rate combinations
+            const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
+            const cleanedRateCombinations = parseRateCombinations(rawRateCombinations);
+    
+            if (planName) {
+                // Auto-populate row with normalized start date and cleaned rate combinations
+                autoPopulateRow({
+                    name: planName,
+                    startDate: normalizedStartDate,
+                    rateDescriptions: cleanedRateCombinations
+                });
+            } else {
+                alert("Plan Name not found for this tab!");
+            }
+        }
+    
+        // Update the summary after changes
+        updateSummary();
+    };
+    
+
+    // Add event listeners to all Breakout GS dropdowns
+    document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
+        dropdown.addEventListener('change', handleBreakoutGsChange);
+    });
+
+    // Add Row Button functionality
+    addRowBtn.addEventListener('click', () => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <select name="plan_name" class="form-control plan-name" required>
+                    <option value="">Select Plan</option>
+                    ${createPlanNameOptions()}
+                </select>
+            </td>
+            <td>
+                <input type="text" name="structure_1" class="form-control" placeholder="Enter Structure 1">
+            </td>
+            <td>
+                <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
+            </td>
+            <td>
+                <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
+            </td>
+            <td>
+                <select name="rate_description" class="form-control rate-description">
+                    <option value="">Select Rate Description</option>
+                </select>
+            </td>
+        `;
+        groupStructureTable.appendChild(row);
+        updateSummary();
+    });
+
+    // Initial summary update
+    updateSummary();
+
+    // Ensure initial blank rows
+    const ensureBlankRows = () => {
+        if (groupStructureTable.children.length === 0) {
             const row = document.createElement('tr');
             row.innerHTML = `
                 <td>
-                    <input type="text" name="plan_name" class="form-control" placeholder="Enter Plan Name" required>
+                    <select name="plan_name" class="form-control plan-name" required>
+                        <option value="">Select Plan</option>
+                        ${createPlanNameOptions()}
+                    </select>
                 </td>
                 <td>
                     <input type="text" name="structure_1" class="form-control" placeholder="Enter Structure 1">
@@ -673,31 +707,20 @@ Plan Overview
                     <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
                 </td>
                 <td>
-                    <input type="text" name="rate_description" class="form-control" placeholder="Enter Rate Description" required>
+                    <select name="rate_description" class="form-control rate-description">
+                        <option value="">Select Rate Description</option>
+                    </select>
                 </td>
             `;
             groupStructureTable.appendChild(row);
-    
-            // Update the summary after changes
-            updateSummary();
-        });
-    
-        // Listen for real-time changes in all inputs
-        const inputs = document.querySelectorAll('input[type="text"], input[type="number"]');
-        inputs.forEach(input => {
-            input.addEventListener('input', updateSummary);
-        });
-    
-        // Initial summary update
-        updateSummary();
-    
-        // Ensure initial blank rows
-        ensureBlankRows();
-    });
-    
-        
-    
+        }
+    };
+    ensureBlankRows();
+});
 </script>
+
+
+    
 
 
 <!-- Additional CSS for Styling -->
