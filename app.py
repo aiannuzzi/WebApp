@@ -45,7 +45,7 @@ def client_dashboard(client_id):
     plans = plan_response.data
         # Categorize plans by LOC
     categorized_plans = {
-        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical/Rx'],
+        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical'],
         "Dental": [plan for plan in plans if plan['LOC'] == 'Dental'],
         "Vision": [plan for plan in plans if plan['LOC'] == 'Vision']
         }
@@ -117,22 +117,22 @@ def build_init(client_id):
         # Retrieve the number of new plans entered
         new_plans = {
             'Self-Funded': {
-                'Medical/Rx': form.self_funded_medical.data,
+                'Medical': form.self_funded_medical.data,
                 'Dental': form.self_funded_dental.data,
                 'Vision': form.self_funded_vision.data,
             },
             'Fully-Insured': {
-                'Medical/Rx': form.fully_insured_medical.data,
+                'Medical': form.fully_insured_medical.data,
                 'Dental': form.fully_insured_dental.data,
                 'Vision': form.fully_insured_vision.data,
             },
             'Level-Funded': {
-                'Medical/Rx': form.level_funded_medical.data,
+                'Medical': form.level_funded_medical.data,
                 'Dental': form.level_funded_dental.data,
                 'Vision': form.level_funded_vision.data,
             },
             'Minimum-Premium': {
-                'Medical/Rx': form.min_prem_medical.data,
+                'Medical': form.min_prem_medical.data,
                 'Dental': form.min_prem_dental.data,
                 'Vision': form.min_prem_vision.data,
             }
