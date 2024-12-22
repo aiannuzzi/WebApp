@@ -45,7 +45,7 @@ def client_dashboard(client_id):
     plans = plan_response.data
         # Categorize plans by LOC
     categorized_plans = {
-        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical/Rx'],
+        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical'],
         "Dental": [plan for plan in plans if plan['LOC'] == 'Dental'],
         "Vision": [plan for plan in plans if plan['LOC'] == 'Vision']
         }
@@ -379,6 +379,20 @@ from collections import defaultdict
 
 @app.route('/client/<int:client_id>/plan_overview', methods=['GET'])
 def plan_overview(client_id):
+    
+    # Fetch carrier data
+    carriers_query = supabase.table('Carrier').select('*').execute()
+    carriers_data = carriers_query.data if carriers_query.data else []
+    # Organize carriers by line of coverage
+    carriers_by_loc = {
+        'Medical': [c['CarrierName'] for c in carriers_data if c.get('Medical')==1],
+        'Dental': [c['CarrierName'] for c in carriers_data if c.get('Dental')==1],
+        'Vision': [c['CarrierName'] for c in carriers_data if c.get('Vision')==1],
+        'Stop Loss': [c['CarrierName'] for c in carriers_data if c.get('StopLoss')==1],
+        'Rx Carve Out': [c['CarrierName'] for c in carriers_data if c.get('RxCarveOut')==1],
+    }
+    print(carriers_by_loc)
+    
     # Initialize plan_data
     plan_data = defaultdict(dict)
 
@@ -467,7 +481,8 @@ def plan_overview(client_id):
         client_id=client_id,
         plan_data=plan_data,
         tier_data=tier_data,
-        plan_rate_data=rate_data
+        plan_rate_data=rate_data,
+        carriers_by_loc=carriers_by_loc
     )
 
 

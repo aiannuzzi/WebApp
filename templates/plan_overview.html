@@ -141,22 +141,36 @@ Plan Overview
                                         
                                         <!-- Primary Carrier -->
                                         <td>
-                                            <input 
-                                                type="text" 
-                                                name="primary_carrier" 
-                                                class="form-control" 
-                                                value="{{ plan_info.carrier }}" 
-                                                placeholder="Enter Primary Carrier">
+                                            <select name="primary_carrier" class="form-control">
+                                                <option value="">Select Primary Carrier</option>
+                                                {% if plan_info.loc in carriers_by_loc %}
+                                                    {% for carrier in carriers_by_loc[plan_info.loc] %}
+                                                        <option value="{{ carrier }}" {% if plan_info.carrier == carrier %}selected{% endif %}>
+                                                            {{ carrier }}
+                                                        </option>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <option value="" disabled>No carriers available</option>
+                                                {% endif %}
+                                            </select>
                                         </td>
+
                                         <!-- Alternate Carrier -->
                                         <td>
-                                            <input 
-                                                type="text" 
-                                                name="alternate_carrier" 
-                                                class="form-control" 
-                                                value="{{ plan_info.alternate_carrier if plan_info.alternate_carrier else '' }}" 
-                                                placeholder="Enter Alternate Carrier">
+                                            <select name="alternate_carrier" class="form-control">
+                                                <option value="">Select Alternate Carrier</option>
+                                                {% if plan_info.loc in carriers_by_loc %}
+                                                    {% for carrier in carriers_by_loc[plan_info.loc] %}
+                                                        <option value="{{ carrier }}" {% if plan_info.alternate_carrier == carrier %}selected{% endif %}>
+                                                            {{ carrier }}
+                                                        </option>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <option value="" disabled>No carriers available</option>
+                                                {% endif %}
+                                            </select>
                                         </td>
+
                                         
 
 
@@ -317,7 +331,7 @@ Plan Overview
                     
 
                     <!-- Additional Tables -->
-                    {% if plan_info['loc'] == "Medical/Rx" and "Self" in plan_info['funding_type'] %}
+                    {% if plan_info['loc'] == "Medical" and "Self" in plan_info['funding_type'] %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Self-Funded: Indivdual Stop Loss</h5>
@@ -336,7 +350,17 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><input type="text" name="isl_carrier_{{ tab_id }}" class="form-control" placeholder="Enter carrier"></td>
+                                        <td>
+                                            <select name="isl_carrier_{{ tab_id }}" class="form-control">
+                                                <option value="">Select Stop Loss Carrier</option>
+                                                {% for carrier in carriers_by_loc['Stop Loss'] %}
+                                                    <option value="{{ carrier }}" {% if carrier == existing_stop_loss_carrier %}selected{% endif %}>
+                                                        {{ carrier }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        
                                         <td><input type="text" name="isl_contract_{{ tab_id }}" class="form-control" placeholder="Enter contract type"></td>
                                         <td><input type="number" name="isl_deductible_{{ tab_id }}" class="form-control" placeholder="Enter deductible"></td>
                                         <td><input type="number" name="isl_premium_pepm_{{ tab_id }}" class="form-control" placeholder="Enter premium PEPM"></td>
@@ -366,7 +390,17 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><input type="text" name="asl_carrier_{{ tab_id }}" class="form-control" placeholder="Enter carrier"></td>
+                                        <td>
+                                            <select name="asl_carrier_{{ tab_id }}" class="form-control">
+                                                <option value="">Select Stop Loss Carrier</option>
+                                                {% for carrier in carriers_by_loc['Stop Loss'] %}
+                                                    <option value="{{ carrier }}" {% if carrier == existing_stop_loss_carrier %}selected{% endif %}>
+                                                        {{ carrier }}
+                                                    </option>
+                                                {% endfor %}
+                                            </select>
+                                        </td>
+                                        
                                         <td><input type="number" name="asl_expected_claim_{{ tab_id }}" class="form-control" placeholder="Enter expected claim"></td>
                                         <td><input type="number" name="asl_max_claim_{{ tab_id }}" class="form-control" placeholder="Enter maximum claim"></td>
                                         <td><input type="number" name="asl_corridor_{{ tab_id }}" class="form-control" placeholder="Enter corridor" min="0" max="100"></td>
@@ -555,7 +589,7 @@ Plan Overview
                 section.innerHTML = `<h5>${tabName}</h5>`;
                 summaryContent.appendChild(section);
         
-                // Clone all tables from the tab
+                // Clone all tables in the tab
                 const tables = tab.querySelectorAll('table');
                 if (tables.length === 0) {
                     const noDataMessage = document.createElement('p');
@@ -566,11 +600,16 @@ Plan Overview
                 tables.forEach(table => {
                     const clonedTable = table.cloneNode(true);
         
-                    // Process all input fields in the cloned table
-                    clonedTable.querySelectorAll('input').forEach(input => {
+                    // Process all input fields and dropdowns in the cloned table
+                    clonedTable.querySelectorAll('input, select').forEach(input => {
                         const cell = input.parentElement;
-                        const value = input.value.trim();
-                        cell.textContent = value || 'Enter value'; // Replace input with its value
+                        let value = '';
+                        if (input.tagName === 'SELECT') {
+                            value = input.options[input.selectedIndex]?.textContent.trim() || 'Enter value';
+                        } else {
+                            value = input.value.trim();
+                        }
+                        cell.textContent = value || 'Enter value'; // Replace input or dropdown with its value
                     });
         
                     // Append the cloned table to the section
@@ -592,6 +631,7 @@ Plan Overview
                 summaryContent.appendChild(buttonWrapper);
             }
         };
+        
         
 
         // Function to create plan name dropdown options
