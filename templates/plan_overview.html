@@ -90,6 +90,7 @@ Plan Overview
                                         <th>Plan Name</th>
                                         <th>Line of Coverage</th>
                                         <th>Funding Type</th>
+                                        <th>Plan Type</th>
                                         <th>Primary Carrier</th>
                                         <th>Alternate Carrier</th>
                                         <th>Breakout GS?</th>
@@ -124,6 +125,20 @@ Plan Overview
                                                 value="{{ plan_info.funding_type }}" 
                                                 placeholder="Enter Funding Type">
                                         </td>
+                                        <!--PlanType-->
+                                        <td>
+                                            <select name="plan_type" class="form-control">
+                                                <option value="" {% if not plan_info.plan_type %}selected{% endif %}>Select Plan Type</option>
+                                                <option value="EPO" {% if plan_info.plan_type == 'EPO' %}selected{% endif %}>EPO</option>
+                                                <option value="HDHP - HRA" {% if plan_info.plan_type == 'HDHP - HRA' %}selected{% endif %}>HDHP - HRA</option>
+                                                <option value="HDHP - HSA" {% if plan_info.plan_type == 'HDHP - HSA' %}selected{% endif %}>HDHP - HSA</option>
+                                                <option value="HMO" {% if plan_info.plan_type == 'HMO' %}selected{% endif %}>HMO</option>
+                                                <option value="OTHER" {% if plan_info.plan_type == 'OTHER' %}selected{% endif %}>OTHER</option>
+                                                <option value="POS" {% if plan_info.plan_type == 'POS' %}selected{% endif %}>POS</option>
+                                                <option value="PPO" {% if plan_info.plan_type == 'PPO' %}selected{% endif %}>PPO</option>
+                                            </select>
+                                        </td>
+                                        
                                         <!-- Primary Carrier -->
                                         <td>
                                             <input 
@@ -151,7 +166,7 @@ Plan Overview
                                                 name="breakout_gs" 
                                                 class="form-control" 
                                                 aria-label="Breakout GS Dropdown">
-                                                <option value="" disabled selected>Select Yes/No</option>
+                                                <option value="" disabled selected>Yes/No</option>
                                                 <option value="Yes" {% if plan_info.breakout_gs == 'Yes' %}selected{% endif %}>Yes</option>
                                                 <option value="No" {% if plan_info.breakout_gs == 'No' %}selected{% endif %}>No</option>
                                             </select>

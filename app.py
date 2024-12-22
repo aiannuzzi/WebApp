@@ -398,11 +398,12 @@ def plan_overview(client_id):
 
             if plan_id is not None:
                 # Fetch details for existing plans from the database
-                plan_query = supabase.table('Plan').select('PlanName', 'FundingType', 'LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
+                plan_query = supabase.table('Plan').select('PlanName', 'FundingType', 'PlanType','LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
                 if plan_query.data:
                     plan_data[plan_id] = {
                         'name': plan_query.data[0]['PlanName'],
                         'funding_type': plan_query.data[0]['FundingType'],
+                        'plan_type':plan_query.data[0]['PlanType'],
                         'loc': plan_query.data[0]['LOC'],
                         'carrier': plan_query.data[0]['PrimaryCarrierName'],
                         'start_date': start_date,
