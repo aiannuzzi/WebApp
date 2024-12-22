@@ -45,7 +45,7 @@ def client_dashboard(client_id):
     plans = plan_response.data
         # Categorize plans by LOC
     categorized_plans = {
-        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical'],
+        "Medical": [plan for plan in plans if plan['LOC'] == 'Medical/Rx'],
         "Dental": [plan for plan in plans if plan['LOC'] == 'Dental'],
         "Vision": [plan for plan in plans if plan['LOC'] == 'Vision']
         }

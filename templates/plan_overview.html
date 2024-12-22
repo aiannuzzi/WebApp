@@ -521,7 +521,7 @@ Plan Overview
         const summaryContent = document.getElementById('summary-content');
         const groupStructureTable = document.getElementById('group-structure-table').querySelector('tbody');
         const addRowBtn = document.getElementById('add-row-btn');
-    
+
         // Function to update the summary tab content
         const updateSummary = () => {
             summaryContent.innerHTML = '';
@@ -547,7 +547,7 @@ Plan Overview
                 summaryContent.innerHTML = '<p>No data entered yet.</p>';
             }
         };
-    
+
         // Function to create plan name dropdown options
         const createPlanNameOptions = () => {
             return Array.from(document.querySelectorAll('.nav-link[data-plan-name]'))
@@ -557,7 +557,19 @@ Plan Overview
                 })
                 .join('');
         };
-    
+
+        // Update plan name options dynamically
+        const updatePlanNameOptions = () => {
+            const planOptionsHTML = createPlanNameOptions();
+            groupStructureTable.querySelectorAll('select[name="plan_name"]').forEach(dropdown => {
+                const currentValue = dropdown.value;
+                dropdown.innerHTML = `<option value="">Select Plan</option>${planOptionsHTML}`;
+                if (currentValue) {
+                    dropdown.value = currentValue;
+                }
+            });
+        };
+
         // Parse and clean rate combinations
         const parseRateCombinations = (rateCombinationsString) => {
             if (Array.isArray(rateCombinationsString)) {
@@ -567,11 +579,11 @@ Plan Overview
                 return rateCombinationsString
                     .replace(/\[|\]|'/g, '') // Remove brackets and single quotes
                     .split(',')
-                    .map(rate => rate.trim()); // Split by comma and trim whitespace
+                    .map(rate => rate.trim());
             }
-            return []; // Return an empty array if the input is invalid
+            return [];
         };
-    
+
         // Function to populate rate descriptions dynamically
         const populateRateDescriptions = (selectedPlanName, rateDropdown) => {
             const tab = Array.from(document.querySelectorAll('.nav-link[data-plan-name]'))
@@ -580,7 +592,7 @@ Plan Overview
                 const parentTab = document.querySelector(`#${tab.getAttribute('aria-controls')}`);
                 const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
                 const cleanedRateDescriptions = parseRateCombinations(rawRateCombinations);
-    
+
                 // Populate rate descriptions
                 rateDropdown.innerHTML = '<option value="">Select Rate Description</option>';
                 cleanedRateDescriptions.forEach(rate => {
@@ -591,7 +603,7 @@ Plan Overview
                 });
             }
         };
-    
+
         // Function to auto-populate rows for the Group Structure table
         const autoPopulateRow = (plan) => {
             const cleanedRateDescriptions = parseRateCombinations(plan.rateDescriptions);
@@ -622,61 +634,82 @@ Plan Overview
             groupStructureTable.appendChild(row);
             const planDropdown = row.querySelector('.plan-name');
             const rateDropdown = row.querySelector('.rate-description');
-    
+
             if (planDropdown && plan.name) {
                 planDropdown.value = plan.name;
             }
-    
-            // Add event listener to dynamically populate rate descriptions
+
             planDropdown.addEventListener('change', (event) => {
                 const selectedPlanName = event.target.value;
                 populateRateDescriptions(selectedPlanName, rateDropdown);
             });
         };
-    
-        // Function to handle Breakout GS changes
-        const handleBreakoutGsChange = (event) => {
-            const dropdown = event.target;
-            const selectedValue = dropdown.value;
-    
-            if (selectedValue === "No") {
-                const parentTab = dropdown.closest('.tab-pane');
-                const tabId = parentTab.id;
-    
-                // Get plan name from the associated tab
-                const planName = document.querySelector(`[aria-controls="${tabId}"]`).getAttribute('data-plan-name') || "";
-    
-                // Normalize the start date
-                const rawStartDate = parentTab.getAttribute('data-start-date') || "";
-                const normalizedStartDate = rawStartDate 
-                    ? new Date(`${rawStartDate}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC' }) 
-                    : "";
-    
-                // Parse and clean rate combinations
-                const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
-                const cleanedRateCombinations = parseRateCombinations(rawRateCombinations);
-    
-                if (planName) {
-                    // Auto-populate row with normalized start date and cleaned rate combinations
-                    autoPopulateRow({
-                        name: planName,
-                        startDate: normalizedStartDate,
-                        rateDescriptions: cleanedRateCombinations
+
+        // Plan name change listener
+        document.querySelectorAll('input[name="plan_name"]').forEach(planNameInput => {
+            planNameInput.addEventListener('input', (event) => {
+                const newPlanName = event.target.value.trim(); // Get the updated plan name
+                const parentTab = event.target.closest('.tab-pane'); // Get the parent tab
+
+                if (parentTab) {
+                    const tabId = parentTab.id;
+
+                    // Update the navigation link
+                    const navLink = document.querySelector(`[aria-controls="${tabId}"]`);
+                    if (navLink) {
+                        navLink.setAttribute('data-plan-name', newPlanName);
+                    }
+
+                    // Update dropdown options in the Group Structure table
+                    updatePlanNameOptions();
+
+                    // Update structure_1 fields dynamically
+                    groupStructureTable.querySelectorAll('tr').forEach(row => {
+                        const planDropdown = row.querySelector('select[name="plan_name"]');
+                        const structure1Input = row.querySelector('input[name="structure_1"]');
+
+                        if (planDropdown && structure1Input && planDropdown.value === newPlanName) {
+                            structure1Input.value = `${newPlanName} ${new Date().getFullYear()}`;
+                        }
                     });
-                } else {
-                    alert("Plan Name not found for this tab!");
                 }
-            }
-    
-            // Update the summary after changes
-            updateSummary();
-        };
-    
-        // Add event listeners to all Breakout GS dropdowns
-        document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
-            dropdown.addEventListener('change', handleBreakoutGsChange);
+            });
         });
-    
+
+        // Handle Breakout GS changes
+        document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
+            dropdown.addEventListener('change', (event) => {
+                const dropdown = event.target;
+                const selectedValue = dropdown.value;
+
+                if (selectedValue === "No") {
+                    const parentTab = dropdown.closest('.tab-pane');
+                    const tabId = parentTab.id;
+
+                    const planName = document.querySelector(`[aria-controls="${tabId}"]`).getAttribute('data-plan-name') || "";
+                    const rawStartDate = parentTab.getAttribute('data-start-date') || "";
+                    const normalizedStartDate = rawStartDate
+                        ? new Date(`${rawStartDate}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC' })
+                        : "";
+
+                    const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
+                    const cleanedRateCombinations = parseRateCombinations(rawRateCombinations);
+
+                    if (planName) {
+                        autoPopulateRow({
+                            name: planName,
+                            startDate: normalizedStartDate,
+                            rateDescriptions: cleanedRateCombinations
+                        });
+                    } else {
+                        alert("Plan Name not found for this tab!");
+                    }
+                }
+
+                updateSummary();
+            });
+        });
+
         // Add Row Button functionality
         addRowBtn.addEventListener('click', () => {
             const row = document.createElement('tr');
@@ -703,22 +736,17 @@ Plan Overview
                 </td>
             `;
             groupStructureTable.appendChild(row);
-    
-            // Add event listener for dynamic population of rate descriptions
+
             const planDropdown = row.querySelector('.plan-name');
             const rateDropdown = row.querySelector('.rate-description');
-    
             planDropdown.addEventListener('change', (event) => {
                 const selectedPlanName = event.target.value;
                 populateRateDescriptions(selectedPlanName, rateDropdown);
             });
-    
+
             updateSummary();
         });
-    
-        // Initial summary update
-        updateSummary();
-    
+
         // Ensure initial blank rows
         const ensureBlankRows = () => {
             if (groupStructureTable.children.length === 0) {
@@ -746,24 +774,21 @@ Plan Overview
                     </td>
                 `;
                 groupStructureTable.appendChild(row);
-    
-                // Add event listener for dynamic population of rate descriptions
+
                 const planDropdown = row.querySelector('.plan-name');
                 const rateDropdown = row.querySelector('.rate-description');
-    
                 planDropdown.addEventListener('change', (event) => {
                     const selectedPlanName = event.target.value;
                     populateRateDescriptions(selectedPlanName, rateDropdown);
                 });
             }
         };
-        ensureBlankRows();
+
+        ensureBlankRows(); // Ensure the table starts with at least one row
     });
-    
 </script>
 
 
-    
 
 
 <!-- Additional CSS for Styling -->
