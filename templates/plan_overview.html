@@ -518,15 +518,16 @@ Plan Overview
                         <p>No data entered yet.</p>
                     </div>
                 </div>
+                <!-- Submit Button -->
+                <div class="text-end mt-3">
+                    <button type="submit" class="btn btn-primary btn-lg">Submit</button>
+                </div>
             </div>
         
 
         </div>
 
-        <!-- Submit Button -->
-        <div class="text-end mt-3">
-            <button type="submit" class="btn btn-primary btn-lg">Save & Proceed</button>
-        </div>
+        
     </form>
 </div>
 
@@ -539,29 +540,59 @@ Plan Overview
 
         // Function to update the summary tab content
         const updateSummary = () => {
+            // Clear the existing summary content
             summaryContent.innerHTML = '';
+        
+            // Get all tab panes except the summary tab
             const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
             tabs.forEach(tab => {
                 const tabId = tab.id;
                 const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
+        
+                // Create a section for each tab
                 const section = document.createElement('div');
+                section.classList.add('summary-section'); // Optional styling
                 section.innerHTML = `<h5>${tabName}</h5>`;
                 summaryContent.appendChild(section);
+        
+                // Clone all tables from the tab
                 const tables = tab.querySelectorAll('table');
+                if (tables.length === 0) {
+                    const noDataMessage = document.createElement('p');
+                    noDataMessage.textContent = 'No tables available for this tab.';
+                    section.appendChild(noDataMessage);
+                }
+        
                 tables.forEach(table => {
                     const clonedTable = table.cloneNode(true);
+        
+                    // Process all input fields in the cloned table
                     clonedTable.querySelectorAll('input').forEach(input => {
                         const cell = input.parentElement;
                         const value = input.value.trim();
-                        cell.textContent = value || 'Enter value';
+                        cell.textContent = value || 'Enter value'; // Replace input with its value
                     });
+        
+                    // Append the cloned table to the section
                     section.appendChild(clonedTable);
                 });
             });
+        
+            // If no content, add placeholder
             if (summaryContent.innerHTML.trim() === '') {
                 summaryContent.innerHTML = '<p>No data entered yet.</p>';
             }
+        
+            // Ensure the submit button remains at the bottom of the summary tab
+            const submitButton = document.querySelector('#submit-button');
+            if (submitButton) {
+                const buttonWrapper = document.createElement('div');
+                buttonWrapper.classList.add('text-end', 'mt-3');
+                buttonWrapper.appendChild(submitButton);
+                summaryContent.appendChild(buttonWrapper);
+            }
         };
+        
 
         // Function to create plan name dropdown options
         const createPlanNameOptions = () => {
