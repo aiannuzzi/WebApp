@@ -577,8 +577,8 @@ Plan Overview
             // Clear the existing summary content
             summaryContent.innerHTML = '';
         
-            // Get all tab panes except the summary tab
-            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
+            // Get all tab panes except the summary tab and the Group Structure tab
+            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary):not(#content-group-structure)');
             tabs.forEach(tab => {
                 const tabId = tab.id;
                 const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
@@ -604,12 +604,17 @@ Plan Overview
                     clonedTable.querySelectorAll('input, select').forEach(input => {
                         const cell = input.parentElement;
                         let value = '';
+        
                         if (input.tagName === 'SELECT') {
+                            // For dropdowns, get the selected option's text
                             value = input.options[input.selectedIndex]?.textContent.trim() || 'Enter value';
                         } else {
+                            // For input fields, get the value
                             value = input.value.trim();
                         }
-                        cell.textContent = value || 'Enter value'; // Replace input or dropdown with its value
+        
+                        // Update the cell with the processed value
+                        cell.textContent = value || 'Enter value';
                     });
         
                     // Append the cloned table to the section
@@ -631,6 +636,7 @@ Plan Overview
                 summaryContent.appendChild(buttonWrapper);
             }
         };
+        
         
         
 
