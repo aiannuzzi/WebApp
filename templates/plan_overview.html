@@ -768,14 +768,15 @@ Plan Overview
             });
         });
 
-        // Handle Breakout GS changes
+        
+        // Handle Breakout GS changes exclusively
         document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
             dropdown.addEventListener('change', (event) => {
-                const dropdown = event.target;
-                const selectedValue = dropdown.value;
+                const targetDropdown = event.target; // Rename for clarity
+                const selectedValue = targetDropdown.value;
 
                 if (selectedValue === "No") {
-                    const parentTab = dropdown.closest('.tab-pane');
+                    const parentTab = targetDropdown.closest('.tab-pane');
                     const tabId = parentTab.id;
 
                     const planName = document.querySelector(`[aria-controls="${tabId}"]`).getAttribute('data-plan-name') || "";
@@ -798,6 +799,7 @@ Plan Overview
                     }
                 }
 
+                // Update summary ONLY for Breakout GS changes
                 updateSummary();
             });
         });
