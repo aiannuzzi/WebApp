@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from itertools import product
 from collections import defaultdict
 import os
+import re 
+import uuid 
 
 #Flask Setup
 app = Flask(__name__)
@@ -380,6 +382,8 @@ from collections import defaultdict
 @app.route('/client/<int:client_id>/plan_overview', methods=['GET'])
 def plan_overview(client_id):
     
+    csrf_token = generate_csrf() 
+    
     # Fetch carrier data
     carriers_query = supabase.table('Carrier').select('*').execute()
     carriers_data = carriers_query.data if carriers_query.data else []
@@ -482,21 +486,75 @@ def plan_overview(client_id):
         plan_data=plan_data,
         tier_data=tier_data,
         plan_rate_data=rate_data,
-        carriers_by_loc=carriers_by_loc
+        carriers_by_loc=carriers_by_loc, 
+        csrf_token=csrf_token
     )
 
 
-@app.route('/client/<int:client_id>/plan_overview/save', methods=['POST'])
+
+@app.route('/client/<int:client_id>/save_plans', methods=['POST'])
 def save_plan_overview(client_id):
-    # Process the form data here
-    form_data = request.form  # Access submitted form data
-    print("Submitted data:", form_data)
+    from collections import defaultdict
+    import json
 
-    # Save to database or session
-    # Redirect to another page or return a response
-    return redirect(url_for('some_other_route', client_id=client_id))
+    try:
+        # Parse form data
+        submitted_data = request.form.to_dict(flat=False)
+        print(f"Request form data: {submitted_data}")
+
+        # Restructure the data
+        plans_data = defaultdict(dict)
+        for key, value in submitted_data.items():
+            if key.startswith("plans["):
+                plan_key = key.split("[")[1].split("]")[0]
+                attribute_key = key.split("][")[1].replace("]", "")
+                plans_data[plan_key][attribute_key] = value[0]
+
+        # Add ClientId and default values
+        structured_plans = []
+        for plan_key, attributes in plans_data.items():
+            structured_plans.append({
+                "PlanName": attributes.get("plan_name") or attributes.get("plan_type") or plan_key,
+                "ClientId": client_id,
+                "LOC": attributes.get("loc"),
+                "PrimaryCarrierName": attributes.get("primary_carrier"),
+                "AltCarrierName": attributes.get("alternate_carrier"),
+                "FundingType": attributes.get("funding_type"),
+                "PlanType": attributes.get("plan_type"),
+                "EffDate": attributes.get("start_date"),
+                "CloseDate": attributes.get("close_date"),
+                "Status": "Active"
+            })
+
+        print(f"Structured plans: {json.dumps(structured_plans, indent=2)}")
+
+        # Fetch existing plans
+        existing_plans_query = supabase.table("Plan").select("PlanName", "LOC", "ClientId").eq("ClientId", client_id).execute()
+        existing_plans = {(plan["PlanName"], plan["LOC"], plan["ClientId"]) for plan in existing_plans_query.data}
+
+        print(f"Existing plans from DB: {existing_plans}")
+
+        # Determine new plans to insert
+        new_plans = []
+        for plan in structured_plans:
+            if (plan["PlanName"], plan["LOC"], plan["ClientId"]) not in existing_plans:
+                new_plans.append(plan)
 
 
-   
+        print(f"New plans to insert: {json.dumps(new_plans, indent=2)}")
+
+        # Insert new plans
+        if new_plans:
+            response = supabase.table("Plan").insert(new_plans).execute()
+            
+
+        return jsonify({"message": "Plans saved successfully"}), 200
+
+    except Exception as e:
+        print(f"Error in save_plan_overview: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
+         
 if __name__ == '__main__':
     app.run(debug=True)

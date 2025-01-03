@@ -31,20 +31,7 @@ Plan Overview
                 </li>
             {% endfor %}
 
-                <!-- Group Structure Tab -->
-                <li class="nav-item" role="presentation">
-                    <button 
-                        class="nav-link" 
-                        id="tab-group-structure" 
-                        data-bs-toggle="tab" 
-                        data-bs-target="#content-group-structure" 
-                        type="button" 
-                        role="tab" 
-                        aria-controls="content-group-structure" 
-                        aria-selected="false">
-                        Group Structure
-                    </button>
-                </li>
+            
 
                 <!-- Summary Tab -->
                 <li class="nav-item" role="presentation">
@@ -93,41 +80,45 @@ Plan Overview
                                         <th>Plan Type</th>
                                         <th>Primary Carrier</th>
                                         <th>Alternate Carrier</th>
-                                        <th>Breakout GS?</th>
+                                        
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr>
                                         <!-- Plan Name -->
+                                        
                                         <td>
                                             <input 
                                                 type="text" 
-                                                name="plan_name" 
+                                                name="plans[{{ tab_id }}][plan_name]" 
                                                 class="form-control" 
                                                 value="{{ plan_info.name }}" 
-                                                placeholder="Enter Plan Name">
+                                                placeholder="Enter Plan Name"
+                                                data-summary="{{ plan_info.name }}" >
                                         </td>
                                         <!-- Line of Coverage -->
                                         <td>
                                             <input 
                                                 type="text" 
-                                                name="line_of_coverage" 
+                                                name="plans[{{ tab_id }}][loc]" 
                                                 class="form-control" 
                                                 value="{{ plan_info.loc }}" 
-                                                placeholder="Enter Line of Coverage">
+                                                placeholder="Enter Line of Coverage"
+                                                data-sumamry="{{ plan_info.loc }}">
                                         </td>
                                         <!-- Funding Type -->
                                         <td>
                                             <input 
                                                 type="text" 
-                                                name="funding_type" 
+                                                name="plans[{{ tab_id }}][funding_type]" 
                                                 class="form-control" 
                                                 value="{{ plan_info.funding_type }}" 
-                                                placeholder="Enter Funding Type">
+                                                placeholder="Enter Funding Type"
+                                                data-summary="{{ plan_info.funding_type }}">
                                         </td>
                                         <!--PlanType-->
                                         <td>
-                                            <select name="plan_type" class="form-control">
+                                            <select name="plans[{{ tab_id }}][plan_type]" class="form-control plan-type-dropdown" data-summary="{{plan_info.plan_type}}">
                                                 <option value="" {% if not plan_info.plan_type %}selected{% endif %}>Select Plan Type</option>
                                                 <option value="EPO" {% if plan_info.plan_type == 'EPO' %}selected{% endif %}>EPO</option>
                                                 <option value="HDHP - HRA" {% if plan_info.plan_type == 'HDHP - HRA' %}selected{% endif %}>HDHP - HRA</option>
@@ -141,7 +132,7 @@ Plan Overview
                                         
                                         <!-- Primary Carrier -->
                                         <td>
-                                            <select name="primary_carrier" class="form-control">
+                                            <select name="plans[{{ tab_id }}][primary_carrier]" class="form-control primary-carrier-dropdown" data-summary="{{plan_info.carrier}}">
                                                 <option value="">Select Primary Carrier</option>
                                                 {% if plan_info.loc in carriers_by_loc %}
                                                     {% for carrier in carriers_by_loc[plan_info.loc] %}
@@ -157,7 +148,7 @@ Plan Overview
 
                                         <!-- Alternate Carrier -->
                                         <td>
-                                            <select name="alternate_carrier" class="form-control">
+                                            <select name="plans[{{ tab_id}}][alternate_carrier]" class="form-control alternate-carrier-dropdown" data-summary="{{plan_info.alternate_carrier}}">
                                                 <option value="">Select Alternate Carrier</option>
                                                 {% if plan_info.loc in carriers_by_loc %}
                                                     {% for carrier in carriers_by_loc[plan_info.loc] %}
@@ -171,22 +162,14 @@ Plan Overview
                                             </select>
                                         </td>
 
-                                        
+                                        <input 
+                                            type="hidden" 
+                                            name="plans[{{ tab_id }}][start_date]" 
+                                            value="{{ plan_info.get('start_date', '') }}" 
+                                        />
 
 
-                                        <!--GS Breakout-->
-                                        <td>
-                                            <select 
-                                                name="breakout_gs" 
-                                                class="form-control" 
-                                                aria-label="Breakout GS Dropdown">
-                                                <option value="" disabled selected>Yes/No</option>
-                                                <option value="Yes" {% if plan_info.breakout_gs == 'Yes' %}selected{% endif %}>Yes</option>
-                                                <option value="No" {% if plan_info.breakout_gs == 'No' %}selected{% endif %}>No</option>
-                                            </select>
-                                        </td>
-                                        
-                                        
+            
                                     </tr>
                                 </tbody>
                             </table>
@@ -215,7 +198,7 @@ Plan Overview
                                         <td>{{ rate }}</td>
                                         {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
-                                                <input type="text" name="premium_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                                <input type="text" name="premium_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value" data-summary="Enter Value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -249,7 +232,7 @@ Plan Overview
                                         <td>{{ rate }}</td>
                                         {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
-                                                <input type="text" name="contribution_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                                <input data-summary="Enter Value" type="text" name="contribution_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -282,7 +265,7 @@ Plan Overview
                                         <td>{{ rate }}</td>
                                         {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                             <td>
-                                                <input type="text" name="hsa_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                                <input data-summary="Enter Value" type="text" name="hsa_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -316,7 +299,7 @@ Plan Overview
                                             <td>{{ rate_component }}</td>
                                             {% for i in range(1, plan_info['num_tiers'] + 1) %}
                                                 <td>
-                                                    <input type="text" name="{{ rate_component | replace(' ', '_') }}_tier_{{ i }}" placeholder="Enter value">
+                                                    <input data-summary="Enter Value" type="text" name="{{ rate_component | replace(' ', '_') }}_tier_{{ i }}" placeholder="Enter value">
                                                 </td>
                                             {% endfor %}
                                         </tr>
@@ -350,8 +333,9 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
+                                        <!-- Carrier Dropdown -->
                                         <td>
-                                            <select name="isl_carrier_{{ tab_id }}" class="form-control">
+                                            <select name="isl_carrier_{{ tab_id }}" class="form-control" data-summary="Enter Value">
                                                 <option value="">Select Stop Loss Carrier</option>
                                                 {% for carrier in carriers_by_loc['Stop Loss'] %}
                                                     <option value="{{ carrier }}" {% if carrier == existing_stop_loss_carrier %}selected{% endif %}>
@@ -360,15 +344,60 @@ Plan Overview
                                                 {% endfor %}
                                             </select>
                                         </td>
-                                        
-                                        <td><input type="text" name="isl_contract_{{ tab_id }}" class="form-control" placeholder="Enter contract type"></td>
-                                        <td><input type="number" name="isl_deductible_{{ tab_id }}" class="form-control" placeholder="Enter deductible"></td>
-                                        <td><input type="number" name="isl_premium_pepm_{{ tab_id }}" class="form-control" placeholder="Enter premium PEPM"></td>
-                                        <td><input type="text" name="isl_acc_policy_{{ tab_id }}" class="form-control" placeholder="Enter accumulating policy"></td>
-                                        <td><input type="number" name="isl_acc_deductible_{{ tab_id }}" class="form-control" placeholder="Enter accumulating deductible"></td>
+                            
+                                        <!-- Contract Type -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="isl_contract_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter contract type" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Deductible -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="isl_deductible_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter deductible" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Premium PEPM -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="isl_premium_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter premium PEPM" 
+                                                data-summary="Premium PEPM">
+                                        </td>
+                            
+                                        <!-- Accumulating Policy -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="isl_acc_policy_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter accumulating policy" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Accumulating Deductible -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="isl_acc_deductible_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter accumulating deductible" 
+                                                data-summary="Enter Value">
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
 
@@ -390,8 +419,9 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
+                                        <!-- Carrier Dropdown -->
                                         <td>
-                                            <select name="asl_carrier_{{ tab_id }}" class="form-control">
+                                            <select name="asl_carrier_{{ tab_id }}" class="form-control" data-summary="Enter Value">
                                                 <option value="">Select Stop Loss Carrier</option>
                                                 {% for carrier in carriers_by_loc['Stop Loss'] %}
                                                     <option value="{{ carrier }}" {% if carrier == existing_stop_loss_carrier %}selected{% endif %}>
@@ -400,17 +430,62 @@ Plan Overview
                                                 {% endfor %}
                                             </select>
                                         </td>
-                                        
-                                        <td><input type="number" name="asl_expected_claim_{{ tab_id }}" class="form-control" placeholder="Enter expected claim"></td>
-                                        <td><input type="number" name="asl_max_claim_{{ tab_id }}" class="form-control" placeholder="Enter maximum claim"></td>
-                                        <td><input type="number" name="asl_corridor_{{ tab_id }}" class="form-control" placeholder="Enter corridor" min="0" max="100"></td>
-                                        <td><input type="number" name="asl_premium_pepm_{{ tab_id }}" class="form-control" placeholder="Enter premium PEPM"></td>
-                                        <td><input type="number" name="asl_max_reimbursement_{{ tab_id }}" class="form-control" placeholder="Enter max reimbursement"></td>
-                                    </tr>
-                                </tbody>
+                            
+                                        <!-- Expected Claim Liability -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_expected_claim_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter expected claim" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Maximum Claim Liability -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_max_claim_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter maximum claim" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Corridor -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_corridor_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter corridor" 
+                                                min="0" 
+                                                max="100" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Premium PEPM -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_premium_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter premium PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Maximum Reimbursement -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_max_reimbursement_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter max reimbursement" 
+                                                data-summary="Enter Value">
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
                     {% endif %}
@@ -431,14 +506,39 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        <td><input type="text" name="fees_category_{{ tab_id }}" class="form-control" placeholder="Enter category"></td>
-                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Enter description"></td>
-                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Enter PEPM amount"></td>
-                                    </tr>
-                                </tbody>
+                                        <!-- Category -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="fees_category_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter category" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Description -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="fees_description_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter description" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- PEPM Amount -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="fees_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter PEPM amount" 
+                                                data-summary="Enter Value">
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
                     {% endif %}
@@ -452,8 +552,6 @@ Plan Overview
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        
-                                        
                                         <th>Pooling Level</th>
                                         <th>Pooling Fee PEPM</th>
                                         <th>Rx Rebate Offset</th>
@@ -461,15 +559,39 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        
-                                        <td><input type="text" name="pooling_level_{{ tab_id }}" class="form-control" placeholder="Pooling Level"></td>
-                                        <td><input type="number" name="pooling_fees_{{ tab_id }}" class="form-control" placeholder="Pooling Fee PEPM"></td>
-                                        <td><input type="number" name="rebate_offset_{{ tab_id }}" class="form-control" placeholder="Rx Rebate Offset"></td>
-                                    </tr>
-                                </tbody>
+                                        <!-- Pooling Level -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="pooling_level_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Pooling Level" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Pooling Fee PEPM -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="pooling_fees_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Pooling Fee PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Rx Rebate Offset -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="rebate_offset_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Rx Rebate Offset" 
+                                                data-summary="Enter Value">
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
                     {% endif %}
@@ -483,7 +605,6 @@ Plan Overview
                             <table class="table table-bordered">
                                 <thead>
                                     <tr>
-                                        
                                         <th>Calculated Budget</th>
                                         <th>Retention PEPM</th>
                                         <th>Claims Funding PEPM</th>
@@ -492,55 +613,56 @@ Plan Overview
                                 </thead>
                                 <tbody>
                                     <tr>
-                                        
-                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Calculated Budget"></td>
-                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Retention PEPM"></td>
-                                        <td><input type="text" name="fees_description_{{ tab_id }}" class="form-control" placeholder="Claims Funding PEPM"></td>
-                                        <td><input type="number" name="fees_pepm_{{ tab_id }}" class="form-control" placeholder="Rx Rebate Offset"></td>
-                                    </tr>
-                                </tbody>
+                                        <!-- Calculated Budget -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="fees_description_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Calculated Budget" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Retention PEPM -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="fees_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Retention PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Claims Funding PEPM -->
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="fees_description_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Claims Funding PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+                            
+                                        <!-- Rx Rebate Offset -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="fees_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Rx Rebate Offset" 
+                                                data-summary="Enter Value">
+                                        </td>
                                     </tr>
                                 </tbody>
                             </table>
+                            
                         </div>
                     </div>
                     {% endif %}
                 </div>
             {% endfor %}
 
-            <!-- Group Structure Tab Content -->
-            <div 
-                class="tab-pane fade" 
-                id="content-group-structure" 
-                role="tabpanel" 
-                aria-labelledby="tab-group-structure">
-                <div class="card mt-4 mb-4">
-                    
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0">Group Structure</h5>
-                    </div>
-                    <div class="card-body">
-                        <table id="group-structure-table" class="table table-striped table-bordered">
-                            <thead>
-                                <tr>
-                                    <th>Plan Name</th>
-                                    <th>Structure 1</th>
-                                    <th>Structure 2</th>
-                                    <th>Structure 3</th>
-                                    <th>Rate Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <!-- Auto-populated rows (added dynamically via JavaScript if Breakout GS is "No") -->
-                            </tbody>
-                        </table>
-                        <!-- Add Rows Button -->
-                        <button id="add-row-btn" class="btn btn-primary mt-3">Add Row</button>
-                    </div>
-                   
-                </div>
-            </div>
-
+           
             <!-- Summary Tab Content -->
             <div class="tab-pane fade" id="content-summary" role="tabpanel" aria-labelledby="tab-summary">
                 <div class="card mt-4 mb-4">
@@ -569,319 +691,135 @@ Plan Overview
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const summaryContent = document.getElementById('summary-content');
-        const groupStructureTable = document.getElementById('group-structure-table').querySelector('tbody');
-        const addRowBtn = document.getElementById('add-row-btn');
-
-        // Function to update the summary tab content
+        const form = document.querySelector('form');
+    
+        // Prevent form submission when pressing Enter in input fields
+        form.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && event.target.tagName === 'INPUT') {
+                event.preventDefault(); // Prevent default form submission
+            }
+        });
+    
         const updateSummary = () => {
-            // Clear the existing summary content
-            summaryContent.innerHTML = '';
-        
-            // Get all tab panes except the summary tab and the Group Structure tab
-            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary):not(#content-group-structure)');
+            summaryContent.innerHTML = ''; // Clear summary content
+    
+            const tabs = document.querySelectorAll('.tab-pane:not(#content-summary)');
             tabs.forEach(tab => {
+                // Get the tab name from the button associated with this tab-pane
                 const tabId = tab.id;
-                const tabName = document.querySelector(`[aria-controls="${tabId}"]`).textContent.trim();
-        
-                // Create a section for each tab
+                const tabName = document.querySelector(`[aria-controls="${tabId}"]`)?.textContent?.trim() || 'Unnamed Tab';
+    
+                // Create a section for this tab
                 const section = document.createElement('div');
-                section.classList.add('summary-section'); // Optional styling
+                section.classList.add('summary-section'); // Optional styling class
                 section.innerHTML = `<h5>${tabName}</h5>`;
                 summaryContent.appendChild(section);
-        
-                // Clone all tables in the tab
+    
+                // Clone and process all tables within the current tab
                 const tables = tab.querySelectorAll('table');
                 if (tables.length === 0) {
+                    // If no tables, display a message
                     const noDataMessage = document.createElement('p');
-                    noDataMessage.textContent = 'No tables available for this tab.';
+                    noDataMessage.textContent = 'No data available for this tab.';
                     section.appendChild(noDataMessage);
-                }
-        
-                tables.forEach(table => {
-                    const clonedTable = table.cloneNode(true);
-        
-                    // Process all input fields and dropdowns in the cloned table
-                    clonedTable.querySelectorAll('input, select').forEach(input => {
-                        const cell = input.parentElement;
-                        let value = '';
-        
-                        if (input.tagName === 'SELECT') {
-                            // For dropdowns, get the selected option's text
-                            value = input.options[input.selectedIndex]?.textContent.trim() || 'Enter value';
-                        } else {
-                            // For input fields, get the value
-                            value = input.value.trim();
-                        }
-        
-                        // Update the cell with the processed value
-                        cell.textContent = value || 'Enter value';
+                } else {
+                    tables.forEach(table => {
+                        const clonedTable = table.cloneNode(true);
+                        clonedTable.querySelectorAll('input, select').forEach(input => {
+                            // Skip hidden inputs
+                            if (input.type === 'hidden') {
+                                return;
+                            }
+    
+                            const cell = input.parentElement;
+                            const summaryValue = input.getAttribute('data-summary') || '';
+    
+                            if (input.tagName === 'SELECT') {
+                                // Handle dropdowns
+                                const selectedValue = input.options[input.selectedIndex]?.textContent || 'Select value';
+                                cell.textContent = summaryValue || selectedValue;
+                            } else {
+                                // Handle text/number inputs
+                                const inputValue = input.value || 'Enter value';
+                                cell.textContent = summaryValue || inputValue;
+                            }
+                        });
+                        section.appendChild(clonedTable); // Add table to the section
                     });
-        
-                    // Append the cloned table to the section
-                    section.appendChild(clonedTable);
-                });
+                }
             });
-        
-            // If no content, add placeholder
+    
             if (summaryContent.innerHTML.trim() === '') {
                 summaryContent.innerHTML = '<p>No data entered yet.</p>';
             }
-        
-            // Ensure the submit button remains at the bottom of the summary tab
-            const submitButton = document.querySelector('#submit-button');
-            if (submitButton) {
-                const buttonWrapper = document.createElement('div');
-                buttonWrapper.classList.add('text-end', 'mt-3');
-                buttonWrapper.appendChild(submitButton);
-                summaryContent.appendChild(buttonWrapper);
-            }
         };
-        
-        
-        
-
-        // Function to create plan name dropdown options
-        const createPlanNameOptions = () => {
-            return Array.from(document.querySelectorAll('.nav-link[data-plan-name]'))
-                .map(button => {
-                    const planName = button.getAttribute('data-plan-name');
-                    return planName ? `<option value="${planName}">${planName}</option>` : '';
-                })
-                .join('');
-        };
-
-        // Update plan name options dynamically
-        const updatePlanNameOptions = () => {
-            const planOptionsHTML = createPlanNameOptions();
-            groupStructureTable.querySelectorAll('select[name="plan_name"]').forEach(dropdown => {
-                const currentValue = dropdown.value;
-                dropdown.innerHTML = `<option value="">Select Plan</option>${planOptionsHTML}`;
-                if (currentValue) {
-                    dropdown.value = currentValue;
-                }
-            });
-        };
-
-        // Parse and clean rate combinations
-        const parseRateCombinations = (rateCombinationsString) => {
-            if (Array.isArray(rateCombinationsString)) {
-                return rateCombinationsString.map(rate => rate.trim());
-            }
-            if (typeof rateCombinationsString === 'string') {
-                return rateCombinationsString
-                    .replace(/\[|\]|'/g, '') // Remove brackets and single quotes
-                    .split(',')
-                    .map(rate => rate.trim());
-            }
-            return [];
-        };
-
-        // Function to populate rate descriptions dynamically
-        const populateRateDescriptions = (selectedPlanName, rateDropdown) => {
-            const tab = Array.from(document.querySelectorAll('.nav-link[data-plan-name]'))
-                .find(button => button.getAttribute('data-plan-name') === selectedPlanName);
-            if (tab) {
-                const parentTab = document.querySelector(`#${tab.getAttribute('aria-controls')}`);
-                const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
-                const cleanedRateDescriptions = parseRateCombinations(rawRateCombinations);
-
-                // Populate rate descriptions
-                rateDropdown.innerHTML = '<option value="">Select Rate Description</option>';
-                cleanedRateDescriptions.forEach(rate => {
-                    const option = document.createElement('option');
-                    option.value = rate;
-                    option.textContent = rate;
-                    rateDropdown.appendChild(option);
-                });
-            }
-        };
-
-        // Function to auto-populate rows for the Group Structure table
-        const autoPopulateRow = (plan) => {
-            const cleanedRateDescriptions = parseRateCombinations(plan.rateDescriptions);
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <select name="plan_name" class="form-control plan-name" required>
-                        <option value="">Select Plan</option>
-                        ${createPlanNameOptions()}
-                    </select>
-                </td>
-                <td>
-                    <input type="text" name="structure_1" class="form-control" value="${plan.name} ${new Date(plan.startDate).getFullYear()}" required>
-                </td>
-                <td>
-                    <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
-                </td>
-                <td>
-                    <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
-                </td>
-                <td>
-                    <select name="rate_description" class="form-control rate-description">
-                        <option value="">Select Rate Description</option>
-                        ${cleanedRateDescriptions.map(rate => `<option value="${rate}">${rate}</option>`).join('')}
-                    </select>
-                </td>
-            `;
-            groupStructureTable.appendChild(row);
-            const planDropdown = row.querySelector('.plan-name');
-            const rateDropdown = row.querySelector('.rate-description');
-
-            if (planDropdown && plan.name) {
-                planDropdown.value = plan.name;
-            }
-
-            planDropdown.addEventListener('change', (event) => {
-                const selectedPlanName = event.target.value;
-                populateRateDescriptions(selectedPlanName, rateDropdown);
-            });
-        };
-
-        // Plan name change listener
-        document.querySelectorAll('input[name="plan_name"]').forEach(planNameInput => {
-            planNameInput.addEventListener('input', (event) => {
-                const newPlanName = event.target.value.trim(); // Get the updated plan name
-                const parentTab = event.target.closest('.tab-pane'); // Get the parent tab
-
-                if (parentTab) {
-                    const tabId = parentTab.id;
-
-                    // Update the navigation link
-                    const navLink = document.querySelector(`[aria-controls="${tabId}"]`);
-                    if (navLink) {
-                        navLink.setAttribute('data-plan-name', newPlanName);
-                    }
-
-                    // Update dropdown options in the Group Structure table
-                    updatePlanNameOptions();
-
-                    // Update structure_1 fields dynamically
-                    groupStructureTable.querySelectorAll('tr').forEach(row => {
-                        const planDropdown = row.querySelector('select[name="plan_name"]');
-                        const structure1Input = row.querySelector('input[name="structure_1"]');
-
-                        if (planDropdown && structure1Input && planDropdown.value === newPlanName) {
-                            structure1Input.value = `${newPlanName} ${new Date().getFullYear()}`;
-                        }
-                    });
-                }
-            });
-        });
-
-        
-        // Handle Breakout GS changes exclusively
-        document.querySelectorAll('select[name="breakout_gs"]').forEach(dropdown => {
+    
+        // Event listeners for dropdowns
+        document.querySelectorAll('select').forEach(dropdown => {
             dropdown.addEventListener('change', (event) => {
-                const targetDropdown = event.target; // Rename for clarity
-                const selectedValue = targetDropdown.value;
-
-                if (selectedValue === "No") {
-                    const parentTab = targetDropdown.closest('.tab-pane');
-                    const tabId = parentTab.id;
-
-                    const planName = document.querySelector(`[aria-controls="${tabId}"]`).getAttribute('data-plan-name') || "";
-                    const rawStartDate = parentTab.getAttribute('data-start-date') || "";
-                    const normalizedStartDate = rawStartDate
-                        ? new Date(`${rawStartDate}T00:00:00Z`).toLocaleDateString('en-US', { timeZone: 'UTC' })
-                        : "";
-
-                    const rawRateCombinations = parentTab.getAttribute('data-rate-combinations') || "";
-                    const cleanedRateCombinations = parseRateCombinations(rawRateCombinations);
-
-                    if (planName) {
-                        autoPopulateRow({
-                            name: planName,
-                            startDate: normalizedStartDate,
-                            rateDescriptions: cleanedRateCombinations
-                        });
-                    } else {
-                        alert("Plan Name not found for this tab!");
-                    }
-                }
-
-                // Update summary ONLY for Breakout GS changes
+                const value = event.target.options[event.target.selectedIndex]?.textContent || '';
+                event.target.setAttribute('data-summary', value); // Update data-summary attribute
                 updateSummary();
             });
         });
-
-        // Add Row Button functionality
-        addRowBtn.addEventListener('click', () => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>
-                    <select name="plan_name" class="form-control plan-name" required>
-                        <option value="">Select Plan</option>
-                        ${createPlanNameOptions()}
-                    </select>
-                </td>
-                <td>
-                    <input type="text" name="structure_1" class="form-control" placeholder="Enter Structure 1">
-                </td>
-                <td>
-                    <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
-                </td>
-                <td>
-                    <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
-                </td>
-                <td>
-                    <select name="rate_description" class="form-control rate-description">
-                        <option value="">Select Rate Description</option>
-                    </select>
-                </td>
-            `;
-            groupStructureTable.appendChild(row);
-
-            const planDropdown = row.querySelector('.plan-name');
-            const rateDropdown = row.querySelector('.rate-description');
-            planDropdown.addEventListener('change', (event) => {
-                const selectedPlanName = event.target.value;
-                populateRateDescriptions(selectedPlanName, rateDropdown);
+    
+        // Event listeners for input fields
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', (event) => {
+                const value = event.target.value || '';
+                input.setAttribute('data-summary', value); // Update data-summary attribute
+                updateSummary();
             });
-
-            updateSummary();
         });
-
-        // Ensure initial blank rows
-        const ensureBlankRows = () => {
-            if (groupStructureTable.children.length === 0) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <select name="plan_name" class="form-control plan-name" required>
-                            <option value="">Select Plan</option>
-                            ${createPlanNameOptions()}
-                        </select>
-                    </td>
-                    <td>
-                        <input type="text" name="structure_1" class="form-control" placeholder="Enter Structure 1">
-                    </td>
-                    <td>
-                        <input type="text" name="structure_2" class="form-control" placeholder="Enter Structure 2">
-                    </td>
-                    <td>
-                        <input type="text" name="structure_3" class="form-control" placeholder="Enter Structure 3">
-                    </td>
-                    <td>
-                        <select name="rate_description" class="form-control rate-description">
-                            <option value="">Select Rate Description</option>
-                        </select>
-                    </td>
-                `;
-                groupStructureTable.appendChild(row);
-
-                const planDropdown = row.querySelector('.plan-name');
-                const rateDropdown = row.querySelector('.rate-description');
-                planDropdown.addEventListener('change', (event) => {
-                    const selectedPlanName = event.target.value;
-                    populateRateDescriptions(selectedPlanName, rateDropdown);
-                });
-            }
-        };
-
-        ensureBlankRows(); // Ensure the table starts with at least one row
+    
+        // Initial population of the summary
+        updateSummary();
     });
+    
+    const submitButton = form.querySelector('button[type="submit"]');
+    submitButton.addEventListener('click', () => {
+        form.submit(); // Explicitly submit the form
+    });
+    
 </script>
 
+<script>
+    document.getElementById('submit-button').addEventListener('click', async () => {
+        const clientId = "{{ client_id }}"; // Pass ClientId dynamically
+        const plans = []; // Array to store plan data
+    
+        // Loop through each table/row in the Summary tab
+        document.querySelectorAll('#summary-content table').forEach(table => {
+            const plan = {};
+            table.querySelectorAll('input, select').forEach(input => {
+                const name = input.name || input.getAttribute('data-summary');
+                if (name) {
+                    plan[name] = input.value || input.textContent;
+                }
+            });
+            plans.push(plan);
+        });
+    
+        // Send data to the server
+        try {
+            const response = await fetch(`/client/${clientId}/save_plans`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(plans),
+            });
+    
+            const result = await response.json();
+            if (response.ok) {
+                alert("Plans saved successfully!");
+            } else {
+                alert(`Error: ${result.error}`);
+            }
+        } catch (error) {
+            console.error("Failed to save plans:", error);
+            alert("An error occurred while saving plans.");
+        }
+    });
+    </script>
 
 
 
