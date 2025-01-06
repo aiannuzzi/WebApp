@@ -201,81 +201,47 @@ def tier_structure(client_id):
         from collections import defaultdict
 
         # Store tier data
-        plan_tier_data = defaultdict(lambda: {"tier_count": None, "tiers": [], "plans": []})
+        plan_tier_data = defaultdict(lambda: {"tier_count": None, "tiers": {}, "plans": []})
 
-        
-
-        # Normalize the keys for tier counts
+        # Normalize form keys
         normalized_form = {}
         for key, value in request.form.items():
-            if key == "number_of_tiers":  # Treat `number_of_tiers` as `tier_count_1`
+            if key == "number_of_tiers":
                 normalized_form["tier_count_1"] = value
             else:
                 normalized_form[key] = value
 
         # Dynamically process tier structures
         for key, value in normalized_form.items():
-            if key.startswith("tier_count_"):  # Detect tier count keys
-                # Extract structure ID (e.g., "tier_count_1" -> "1")
+            if key.startswith("tier_count_"):
                 structure_id = int(key.split("_")[2])
-
-                # Initialize the structure if not already present
-                if structure_id not in plan_tier_data:
-                    plan_tier_data[structure_id] = {"tier_count": None, "tiers": [], "plans": []}
-
-                # Set the tier count for this structure
                 plan_tier_data[structure_id]["tier_count"] = int(value)
 
-            elif key.startswith("choose_tier_"):  # Detect tier names
-                # Parse the key structure: "choose_tier_<structure_id>_<tier_index>"
-                parts = key.split("_")
-                if len(parts) == 3:
-                    structure_id = int(parts[2])
-                    tier_index = int(parts[3]) - 1  # Convert to zero-based index
+            elif key.startswith("choose_tier_"):  # Process Tier Names
+                structure_id, tier_index = map(int, key.split("_")[2:])
+                tier_key = f"Tier {tier_index}"
+                if tier_key not in plan_tier_data[structure_id]["tiers"]:
+                    plan_tier_data[structure_id]["tiers"][tier_key] = {"tier_name": None, "single_family": None}
+                plan_tier_data[structure_id]["tiers"][tier_key]["tier_name"] = value
 
-                    # Ensure the structure and tier exist
-                    while len(plan_tier_data[structure_id]["tiers"]) <= tier_index:
-                        plan_tier_data[structure_id]["tiers"].append({"tier_name": None, "single_family": None})
+            elif key.startswith("single_family_"):  # Process Single/Family Designation
+                structure_id, tier_index = map(int, key.split("_")[2:])
+                tier_key = f"Tier {tier_index}"
+                if tier_key not in plan_tier_data[structure_id]["tiers"]:
+                    plan_tier_data[structure_id]["tiers"][tier_key] = {"tier_name": None, "single_family": None}
+                plan_tier_data[structure_id]["tiers"][tier_key]["single_family"] = value
 
-                    # Set the tier name
-                    plan_tier_data[structure_id]["tiers"][tier_index]["tier_name"] = value
-
-            elif key.startswith("single_family_"):  # Detect single/family designations
-                # Parse the key structure: "single_family_<structure_id>_<tier_index>"
-                parts = key.split("_")
-                if len(parts) == 3:
-                    structure_id = int(parts[2])
-                    tier_index = int(parts[3]) - 1  # Convert to zero-based index
-
-                    # Ensure the structure and tier exist
-                    while len(plan_tier_data[structure_id]["tiers"]) <= tier_index:
-                        plan_tier_data[structure_id]["tiers"].append({"tier_name": None, "single_family": None})
-
-                    # Set the single/family value
-                    plan_tier_data[structure_id]["tiers"][tier_index]["single_family"] = value
-
-            elif key.startswith("selected_plans_"):  # Detect selected plans
-                # Extract structure ID (e.g., "selected_plans_1" -> "1")
+            elif key.startswith("selected_plans_"):  # Process Selected Plans
                 structure_id = int(key.split("_")[2])
-
-                # Ensure the structure exists
-                if structure_id not in plan_tier_data:
-                    plan_tier_data[structure_id] = {"tier_count": None, "tiers": [], "plans": []}
-
-                # Use request.form.getlist to handle multiple values for the key
                 plan_tier_data[structure_id]["plans"] = request.form.getlist(key)
-
-        
 
         # Save the tier data to the session
         session['tier_data'] = dict(plan_tier_data)
-        print(plan_tier_data)
+        print("Processed Tier Data:", plan_tier_data)  # Debug print statement
 
         return redirect(url_for('rate_structure', client_id=client_id))
 
     return render_template('tier_init.html', form=form, client_id=client_id, available_plans=available_plans)
-
-
 
 
 
@@ -381,89 +347,68 @@ from collections import defaultdict
 
 @app.route('/client/<int:client_id>/plan_overview', methods=['GET'])
 def plan_overview(client_id):
-    
-    csrf_token = generate_csrf() 
-    
+    csrf_token = generate_csrf()
+
     # Fetch carrier data
     carriers_query = supabase.table('Carrier').select('*').execute()
     carriers_data = carriers_query.data if carriers_query.data else []
+
     # Organize carriers by line of coverage
     carriers_by_loc = {
-        'Medical': [c['CarrierName'] for c in carriers_data if c.get('Medical')==1],
-        'Dental': [c['CarrierName'] for c in carriers_data if c.get('Dental')==1],
-        'Vision': [c['CarrierName'] for c in carriers_data if c.get('Vision')==1],
-        'Stop Loss': [c['CarrierName'] for c in carriers_data if c.get('StopLoss')==1],
-        'Rx Carve Out': [c['CarrierName'] for c in carriers_data if c.get('RxCarveOut')==1],
+        'Medical': [c['CarrierName'] for c in carriers_data if c.get('Medical') == 1],
+        'Dental': [c['CarrierName'] for c in carriers_data if c.get('Dental') == 1],
+        'Vision': [c['CarrierName'] for c in carriers_data if c.get('Vision') == 1],
+        'Stop Loss': [c['CarrierName'] for c in carriers_data if c.get('StopLoss') == 1],
+        'Rx Carve Out': [c['CarrierName'] for c in carriers_data if c.get('RxCarveOut') == 1],
     }
-    print(carriers_by_loc)
-    
+
     # Initialize plan_data
     plan_data = defaultdict(dict)
 
     # Retrieve data from session
-    active_plans = session.get('available_plans', [])  # [(plan_id, plan_name)]
-    rate_data = session.get('rate_data', {})  # Rate data with options
-    tier_data = session.get('tier_data', {})  # Tier structure data
-    generated_plans = session.get('generated_plans', [])  # Plans generated by the user
-    
-    
+    active_plans = session.get('available_plans', [])
+    rate_data = session.get('rate_data', {})
+    tier_data = session.get('tier_data', {})
+    generated_plans = session.get('generated_plans', [])
+
     # Combine active plans and generated plans into one loop
     for plan in active_plans:
-            plan_id = plan['PlanId']
-            plan_name = plan['PlanName']
-            start_date=plan.get('StartDate')
-            end_date=plan.get('EndDate')
+        plan_id = plan['PlanId']
+        plan_name = plan['PlanName']
+        start_date = plan.get('StartDate')
+        end_date = plan.get('EndDate')
 
-            if plan_id is not None:
-                # Fetch details for existing plans from the database
-                plan_query = supabase.table('Plan').select('PlanName', 'FundingType', 'PlanType','LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
-                if plan_query.data:
-                    plan_data[plan_id] = {
-                        'name': plan_query.data[0]['PlanName'],
-                        'funding_type': plan_query.data[0]['FundingType'],
-                        'plan_type':plan_query.data[0]['PlanType'],
-                        'loc': plan_query.data[0]['LOC'],
-                        'carrier': plan_query.data[0]['PrimaryCarrierName'],
-                        'start_date': start_date,
-                        'end_date': end_date
-                    }
-            else:
-                # For new plans, fetch details from generated_plans
-                matching_generated_plan = next((p for p in generated_plans if p['name'] == plan_name), None)
-                if matching_generated_plan:
-                    plan_data[plan_name] = {
-                        'name': matching_generated_plan['name'],
-                        'funding_type': matching_generated_plan['funding_type'],
-                        'loc': matching_generated_plan['coverage'],
-                        'start_date': start_date,
-                        'end_date': end_date
-                    }
-
+        if plan_id is not None:
+            # Fetch details for existing plans from the database
+            plan_query = supabase.table('Plan').select('PlanName', 'FundingType', 'PlanType', 'LOC', 'PrimaryCarrierName').eq('PlanId', plan_id).execute()
+            if plan_query.data:
+                plan_data[plan_id] = {
+                    'name': plan_query.data[0]['PlanName'],
+                    'funding_type': plan_query.data[0]['FundingType'],
+                    'plan_type': plan_query.data[0]['PlanType'],
+                    'loc': plan_query.data[0]['LOC'],
+                    'carrier': plan_query.data[0]['PrimaryCarrierName'],
+                    'start_date': start_date,
+                    'end_date': end_date
+                }
+        else:
+            # For new plans, fetch details from generated_plans
+            matching_generated_plan = next((p for p in generated_plans if p['name'] == plan_name), None)
+            if matching_generated_plan:
+                plan_data[plan_name] = {
+                    'name': matching_generated_plan['name'],
+                    'funding_type': matching_generated_plan['funding_type'],
+                    'loc': matching_generated_plan['coverage'],
+                    'start_date': start_date,
+                    'end_date': end_date
+                }
 
     # Map tier data to plans
     for structure_id, structure_info in tier_data.items():
-        for plan_id in structure_info.get('plans', []):
-            # Handle both integers and string names
+        for plan_id in structure_info["plans"]:
             plan_id = int(plan_id) if isinstance(plan_id, str) and plan_id.isdigit() else plan_id
-
-            # Get the number of tiers for this structure
-            num_tiers = structure_info.get('tier_count', 0)
-
-            # Update or initialize the plan_data entry for num_tiers
             if plan_id in plan_data:
-                plan_data[plan_id]["num_tiers"] = num_tiers
-            else:
-                # If plan_data entry does not exist, create a placeholder entry with num_tiers
-                plan_data[plan_id] = {
-                    "num_tiers": num_tiers,
-                    "name": None,
-                    "funding_type": None,
-                    "loc": None,
-                    "carrier": None,
-                    "start_date": None,
-                    "end_date": None,
-                    "rate_combinations": [],
-                }
+                plan_data[plan_id]["tiers"] = structure_info["tiers"]
 
     # Generate rate combinations for all plans
     for plan_id, plan_info in plan_data.items():
@@ -476,8 +421,7 @@ def plan_overview(client_id):
             "/".join(combo) for combo in product(*rate_names)
         ]
 
-
-    print(plan_data)
+    print(plan_data)  # Debugging: Print final plan_data for verification
     
     # Render the template
     return render_template(
@@ -486,10 +430,9 @@ def plan_overview(client_id):
         plan_data=plan_data,
         tier_data=tier_data,
         plan_rate_data=rate_data,
-        carriers_by_loc=carriers_by_loc, 
+        carriers_by_loc=carriers_by_loc,
         csrf_token=csrf_token
     )
-
 
 
 @app.route('/client/<int:client_id>/save_plans', methods=['POST'])
@@ -500,9 +443,9 @@ def save_plan_overview(client_id):
     try:
         # Parse form data
         submitted_data = request.form.to_dict(flat=False)
-        print(f"Request form data: {submitted_data}")
+        print(f"Request form data: {json.dumps(submitted_data, indent=2)}")
 
-        # Restructure the data
+        # Parse plans from the submitted data
         plans_data = defaultdict(dict)
         for key, value in submitted_data.items():
             if key.startswith("plans["):
@@ -510,11 +453,18 @@ def save_plan_overview(client_id):
                 attribute_key = key.split("][")[1].replace("]", "")
                 plans_data[plan_key][attribute_key] = value[0]
 
-        # Add ClientId and default values
+        print(f"Parsed Plans Data: {json.dumps(plans_data, indent=2)}")
+
+        # Build plan crosswalk: identifier to name
+        plan_crosswalk = {
+            plan_key: attributes["plan_name"] for plan_key, attributes in plans_data.items()
+        }
+
+        # Structure plans for the Plan table
         structured_plans = []
         for plan_key, attributes in plans_data.items():
             structured_plans.append({
-                "PlanName": attributes.get("plan_name") or attributes.get("plan_type") or plan_key,
+                "PlanName": attributes.get("plan_name"),
                 "ClientId": client_id,
                 "LOC": attributes.get("loc"),
                 "PrimaryCarrierName": attributes.get("primary_carrier"),
@@ -522,38 +472,98 @@ def save_plan_overview(client_id):
                 "FundingType": attributes.get("funding_type"),
                 "PlanType": attributes.get("plan_type"),
                 "EffDate": attributes.get("start_date"),
-                "CloseDate": attributes.get("close_date"),
-                "Status": "Active"
+                "CloseDate": None,
+                "Status": "Active",
             })
 
-        print(f"Structured plans: {json.dumps(structured_plans, indent=2)}")
+        print(f"Structured Plans for Plan Table: {json.dumps(structured_plans, indent=2)}")
 
         # Fetch existing plans
-        existing_plans_query = supabase.table("Plan").select("PlanName", "LOC", "ClientId").eq("ClientId", client_id).execute()
+        existing_plans_query = supabase.table("Plan").select("PlanName, LOC, ClientId").eq("ClientId", client_id).execute()
         existing_plans = {(plan["PlanName"], plan["LOC"], plan["ClientId"]) for plan in existing_plans_query.data}
+        print(f"Existing Plans in DB: {existing_plans}")
 
-        print(f"Existing plans from DB: {existing_plans}")
-
-        # Determine new plans to insert
+        # Identify new plans to insert
         new_plans = []
         for plan in structured_plans:
             if (plan["PlanName"], plan["LOC"], plan["ClientId"]) not in existing_plans:
                 new_plans.append(plan)
 
-
-        print(f"New plans to insert: {json.dumps(new_plans, indent=2)}")
+        print(f"New Plans to Insert: {json.dumps(new_plans, indent=2)}")
 
         # Insert new plans
         if new_plans:
             response = supabase.table("Plan").insert(new_plans).execute()
-            
+            print(f"Insert Response for Plans: {response}")
 
-        return jsonify({"message": "Plans saved successfully"}), 200
+        # Fetch all plans with IDs
+        all_plans_query = supabase.table("Plan").select("PlanId, PlanName").eq("ClientId", client_id).execute()
+        all_plans = {plan["PlanName"]: plan["PlanId"] for plan in all_plans_query.data}
+        print(f"All Plans with PlanIds: {json.dumps(all_plans, indent=2)}")
+
+        # Process premiums
+        premium_rows_to_insert = []
+        for key, values in submitted_data.items():
+            if key.startswith("premium_"):
+                print(f"Processing key: {key}")  # Debugging
+
+                # Parse the key to extract components
+                key_parts = key.split("_")
+
+                # Tier name includes both "Tier" and the number following it
+                tier_name = f"{key_parts[1]} {key_parts[2]}"
+
+                # Plan identifier starts after "Tier" and tier number, up to the second-to-last component
+                plan_identifier = "_".join(key_parts[3:-1])
+
+                # Rate description is the last component
+                rate_description = key_parts[-1]
+
+                print(f"Extracted tier_name: {tier_name}, plan_identifier: {plan_identifier}, rate_description: {rate_description}")  # Debugging
+
+                # Match plan identifier with plan name, then resolve PlanId
+                if plan_identifier in plan_crosswalk:
+                    plan_name = plan_crosswalk[plan_identifier]
+                    if plan_name in all_plans:
+                        plan_id = all_plans[plan_name]
+                        print(f"Matched Plan Identifier: {plan_identifier} -> PlanName: {plan_name} -> PlanId: {plan_id}")  # Debugging
+                    else:
+                        print(f"Plan Name '{plan_name}' not found in all plans.")  # Debugging
+                        continue
+                else:
+                    print(f"Plan Identifier '{plan_identifier}' not found in plan crosswalk.")  # Debugging
+                    continue
+
+                # Add rows for each value in the submitted data
+                for value in values:
+                    premium_row = {
+                        "PlanId": plan_id,
+                        "ClientId": client_id,
+                        "StartDate": plans_data[plan_identifier].get("start_date"),
+                        "SystemTierTrans": tier_name,
+                        "TierName": tier_name.replace("_", " "),
+                        "RateDescription": rate_description,
+                        "PremAmt": float(value) if value else None,
+                        "PremFreq": "Monthly",
+                        "PremAmt_Annual": float(value) * 12 if value else None,
+                        "HSA_Elig": "Yes" if "CDHP" in plans_data[plan_identifier].get("plan_type", "").upper() else "No",
+                        "HSA_Freq_Pref": "Annual",
+                        "HSA_Amt_Annual": None,  # Adjust if needed
+                    }
+                    premium_rows_to_insert.append(premium_row)
+
+        print(f"Premium Rows to Insert: {json.dumps(premium_rows_to_insert, indent=2)}")
+
+        # Insert premiums
+        if premium_rows_to_insert:
+            response = supabase.table("Premium").insert(premium_rows_to_insert).execute()
+            print(f"Insert Response for Premiums: {response}")
+
+        return jsonify({"message": "Plans and premiums saved successfully"}), 200
 
     except Exception as e:
         print(f"Error in save_plan_overview: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
 
          
 if __name__ == '__main__':

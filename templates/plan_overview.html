@@ -177,7 +177,7 @@ Plan Overview
                     </div>
 
                     <!-- Premiums Section -->
-                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type']) %}
+                    {% if "Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Premiums - Monthly</h5>
@@ -187,8 +187,8 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th>Premium Rate Description</th>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
-                                            <th>Tier {{ i }}</th>
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
+                                            <th>{{ tier_key }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
@@ -196,9 +196,13 @@ Plan Overview
                                     {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
                                             <td>
-                                                <input type="text" name="premium_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value" data-summary="Enter Value">
+                                                <input 
+                                                    type="text" 
+                                                    name="premium_{{ tier_key | replace(' ', '_') }}_{{ tab_id }}_{{ rate | replace(' ', '_') }}"
+                                                    class="form-control form-control-sm" 
+                                                    placeholder="Enter value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -209,9 +213,10 @@ Plan Overview
                     </div>
                     {% endif %}
 
-                    <!-- Contributions Section -->
-                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] ) %}
 
+
+                    <!-- Contributions Section -->
+                    {% if "Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Contributions - Monthly</h5>
@@ -220,9 +225,9 @@ Plan Overview
                             <table class="table table-sm table-bordered">
                                 <thead>
                                     <tr>
-                                        <th> Contributions Rate Description</th>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
-                                            <th>Tier {{ i }}</th>
+                                        <th>Contributions Rate Description</th>
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
+                                            <th>{{ tier_key }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
@@ -230,9 +235,13 @@ Plan Overview
                                     {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
                                             <td>
-                                                <input data-summary="Enter Value" type="text" name="contribution_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                                <input 
+                                                    type="text" 
+                                                    name="contribution_{{ tier_key | replace(' ', '_') }}_{{ tab_id }}_{{ loop.index }}" 
+                                                    class="form-control form-control-sm" 
+                                                    placeholder="Enter value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -242,9 +251,11 @@ Plan Overview
                         </div>
                     </div>
                     {% endif %}
+
+
                     
                     <!-- HSA Section -->
-                    {% if ("Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type']) and plan_info.loc == "Medical/Rx" %}
+                    {% if "Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] and plan_info.loc == "Medical/Rx" %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>HSA Contributions - Monthly</h5>
@@ -253,9 +264,9 @@ Plan Overview
                             <table class="table table-sm table-bordered">
                                 <thead>
                                     <tr>
-                                        <th> HSA Rate Description</th>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
-                                            <th>Tier {{ i }}</th>
+                                        <th>HSA Rate Description</th>
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
+                                            <th>{{ tier_key }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
@@ -263,9 +274,13 @@ Plan Overview
                                     {% for rate in plan_info['rate_combinations'] %}
                                     <tr>
                                         <td>{{ rate }}</td>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
                                             <td>
-                                                <input data-summary="Enter Value" type="text" name="hsa_tier{{ i }}_{{ tab_id }}_{{ loop.index }}" class="form-control form-control-sm" placeholder="Enter value">
+                                                <input 
+                                                    type="text" 
+                                                    name="hsa_{{ tier_key | replace(' ', '_') }}_{{ tab_id }}_{{ loop.index }}" 
+                                                    class="form-control form-control-sm" 
+                                                    placeholder="Enter value">
                                             </td>
                                         {% endfor %}
                                     </tr>
@@ -276,9 +291,9 @@ Plan Overview
                     </div>
                     {% endif %}
 
-                    <!-- Level Funded Section -->
-                    {% if ("Level" in plan_info['funding_type'] ) %}
 
+                    <!-- Level Funded Section -->
+                    {% if "Level" in plan_info['funding_type'] %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>Level Funded Rate Components - Monthly</h5>
@@ -288,28 +303,34 @@ Plan Overview
                                 <thead>
                                     <tr>
                                         <th>Rate Components</th>
-                                        {% for i in range(1, plan_info['num_tiers'] + 1) %}
-                                            <th>Tier {{ i }}</th>
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
+                                            <th>{{ tier_key }}</th>
                                         {% endfor %}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for rate_component in ["Admin Fees", "Individual Stop Loss", "Aggregate Stop Loss", "Claims Funding Budget", "Rx Rebate Offset"] %}
-                                        <tr>
-                                            <td>{{ rate_component }}</td>
-                                            {% for i in range(1, plan_info['num_tiers'] + 1) %}
-                                                <td>
-                                                    <input data-summary="Enter Value" type="text" name="{{ rate_component | replace(' ', '_') }}_tier_{{ i }}" placeholder="Enter value">
-                                                </td>
-                                            {% endfor %}
-                                        </tr>
+                                    <tr>
+                                        <td>{{ rate_component }}</td>
+                                        {% for tier_key, details in plan_info['tiers'].items() if details['tier_name'] or details['single_family'] %}
+                                            <td>
+                                                <input 
+                                                    data-summary="Enter Value" 
+                                                    type="text" 
+                                                    name="{{ rate_component | replace(' ', '_') }}_{{ tier_key | replace(' ', '_') }}" 
+                                                    class="form-control form-control-sm" 
+                                                    placeholder="Enter value">
+                                            </td>
+                                        {% endfor %}
+                                    </tr>
                                     {% endfor %}
                                 </tbody>
-                                
                             </table>
                         </div>
                     </div>
                     {% endif %}
+
+
 
                     
 
