@@ -445,20 +445,33 @@ def save_plan_overview(client_id):
         submitted_data = request.form.to_dict(flat=False)
         print(f"Request form data: {json.dumps(submitted_data, indent=2)}")
 
+        # Retrieve tier data from session
+        tier_data = session.get('tier_data', {})
+        print(f"Retrieved Tier Data from Session: {json.dumps(tier_data, indent=2)}")
+
         # Parse plans from the submitted data
         plans_data = defaultdict(dict)
+        tier_name_mapping = defaultdict(dict)  # Map enrollment tiers to tier names
+
+        # Populate tier_name_mapping from session tier_data
+        for tier_set in tier_data.values():
+            plans = tier_set.get("plans", [])
+            tiers = tier_set.get("tiers", {})
+            for plan in plans:
+                for tier_name, tier_info in tiers.items():
+                    if tier_info.get("tier_name"):  # Ensure the tier has a name
+                        tier_name_mapping[plan][tier_name] = tier_info["tier_name"]
+
+        print(f"Tier Name Mapping: {json.dumps(tier_name_mapping, indent=2)}")
+
         for key, value in submitted_data.items():
             if key.startswith("plans["):
-                plan_key = key.split("[")[1].split("]")[0]
+                plan_key = key.split("[")[1].split("]")[0].rsplit("_", 1)[0]
+
                 attribute_key = key.split("][")[1].replace("]", "")
                 plans_data[plan_key][attribute_key] = value[0]
 
         print(f"Parsed Plans Data: {json.dumps(plans_data, indent=2)}")
-
-        # Build plan crosswalk: identifier to name
-        plan_crosswalk = {
-            plan_key: attributes["plan_name"] for plan_key, attributes in plans_data.items()
-        }
 
         # Structure plans for the Plan table
         structured_plans = []
@@ -501,69 +514,106 @@ def save_plan_overview(client_id):
         all_plans = {plan["PlanName"]: plan["PlanId"] for plan in all_plans_query.data}
         print(f"All Plans with PlanIds: {json.dumps(all_plans, indent=2)}")
 
-        # Process premiums
+        # Process premiums and contributions
         premium_rows_to_insert = []
+        contribution_rows_to_insert = []
+
         for key, values in submitted_data.items():
-            if key.startswith("premium_"):
+            if key.startswith("premium_") or key.startswith("contribution_"):
                 print(f"Processing key: {key}")  # Debugging
 
                 # Parse the key to extract components
                 key_parts = key.split("_")
 
                 # Tier name includes both "Tier" and the number following it
-                tier_name = f"{key_parts[1]} {key_parts[2]}"
+                tier_number = f"{key_parts[1]} {key_parts[2]}"
+                print(f"Extracted tier_number: {tier_number}")  # Debugging
 
                 # Plan identifier starts after "Tier" and tier number, up to the second-to-last component
-                plan_identifier = "_".join(key_parts[3:-1])
+                plan_identifier = "_".join(key_parts[3:-2])
+                print(f"Extracted plan_identifier: {plan_identifier}")  # Debugging
 
                 # Rate description is the last component
                 rate_description = key_parts[-1]
+                print(f"Extracted rate_description: {rate_description}")  # Debugging
 
-                print(f"Extracted tier_name: {tier_name}, plan_identifier: {plan_identifier}, rate_description: {rate_description}")  # Debugging
-
-                # Match plan identifier with plan name, then resolve PlanId
-                if plan_identifier in plan_crosswalk:
-                    plan_name = plan_crosswalk[plan_identifier]
-                    if plan_name in all_plans:
-                        plan_id = all_plans[plan_name]
-                        print(f"Matched Plan Identifier: {plan_identifier} -> PlanName: {plan_name} -> PlanId: {plan_id}")  # Debugging
-                    else:
-                        print(f"Plan Name '{plan_name}' not found in all plans.")  # Debugging
-                        continue
+                # Crosswalk to get the plan name from identifier
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    print(f"Matched plan_identifier to plan_name: {plan_identifier} -> {plan_name}")  # Debugging
                 else:
-                    print(f"Plan Identifier '{plan_identifier}' not found in plan crosswalk.")  # Debugging
+                    print(f"Plan Identifier '{plan_identifier}' not found in plans_data.")
                     continue
+
+                # Get the database-assigned PlanId
+                if plan_name in all_plans:
+                    plan_id = all_plans[plan_name]
+                    print(f"Matched plan_name to PlanId: {plan_name} -> {plan_id}")  # Debugging
+                else:
+                    print(f"Plan Name '{plan_name}' not found in all_plans.")
+                    continue
+
+                # Retrieve the tier name from the tier mapping for the specific plan
+                if plan_identifier in tier_name_mapping:
+                    tier_name = tier_name_mapping[plan_identifier].get(tier_number, tier_number)
+                    print(f"Retrieved tier_name: {tier_name}")  # Debugging
+                else:
+                    print(f"No tier data found for Plan Identifier '{plan_identifier}'")
+                    tier_name = tier_number  # Default to "Tier 1", "Tier 2", etc.
+
+                # Correct SystemTierTrans formatting
+                system_tier_trans = tier_number
+                print(f"Formatted SystemTierTrans: {system_tier_trans}")  # Debugging
 
                 # Add rows for each value in the submitted data
                 for value in values:
-                    premium_row = {
-                        "PlanId": plan_id,
-                        "ClientId": client_id,
-                        "StartDate": plans_data[plan_identifier].get("start_date"),
-                        "SystemTierTrans": tier_name,
-                        "TierName": tier_name.replace("_", " "),
-                        "RateDescription": rate_description,
-                        "PremAmt": float(value) if value else None,
-                        "PremFreq": "Monthly",
-                        "PremAmt_Annual": float(value) * 12 if value else None,
-                        "HSA_Elig": "Yes" if "CDHP" in plans_data[plan_identifier].get("plan_type", "").upper() else "No",
-                        "HSA_Freq_Pref": "Annual",
-                        "HSA_Amt_Annual": None,  # Adjust if needed
-                    }
-                    premium_rows_to_insert.append(premium_row)
+                    if key.startswith("premium_"):
+                        premium_row = {
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "TierName": tier_name,
+                            "RateDescription": rate_description,
+                            "PremAmt": float(value) if value else None,
+                            "PremFreq": "Monthly",
+                            "PremAmt_Annual": float(value) * 12 if value else None,
+                        }
+                        premium_rows_to_insert.append(premium_row)
+
+                    elif key.startswith("contribution_"):
+                        contribution_row = {
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "TierName": tier_name,
+                            "RateDescription": rate_description,
+                            "CtrbAmt": float(value) if value else None,
+                            "CtrbFreq": "Monthly",
+                            "CtrbAmt_Annual": float(value) * 12 if value else None,
+                        }
+                        contribution_rows_to_insert.append(contribution_row)
 
         print(f"Premium Rows to Insert: {json.dumps(premium_rows_to_insert, indent=2)}")
+        print(f"Contribution Rows to Insert: {json.dumps(contribution_rows_to_insert, indent=2)}")
 
         # Insert premiums
         if premium_rows_to_insert:
             response = supabase.table("Premium").insert(premium_rows_to_insert).execute()
             print(f"Insert Response for Premiums: {response}")
 
-        return jsonify({"message": "Plans and premiums saved successfully"}), 200
+        # Insert contributions
+        if contribution_rows_to_insert:
+            response = supabase.table("Contribution").insert(contribution_rows_to_insert).execute()
+            print(f"Insert Response for Contributions: {response}")
+
+        return jsonify({"message": "Plans, premiums, and contributions saved successfully"}), 200
 
     except Exception as e:
         print(f"Error in save_plan_overview: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
 
          
 if __name__ == '__main__':
