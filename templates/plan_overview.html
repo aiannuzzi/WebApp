@@ -255,7 +255,7 @@ Plan Overview
 
                     
                     <!-- HSA Section -->
-                    {% if "Self" in plan_info['funding_type'] or "Fully" in plan_info['funding_type'] or "Level" in plan_info['funding_type'] and plan_info.loc == "Medical/Rx" %}
+                    {% if plan_info['loc'] == "Medical"  %}
                     <div class="card mb-4">
                         <div class="card-header bg-secondary text-white">
                             <h5>HSA Contributions - Monthly</h5>
@@ -393,6 +393,7 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
+                                                step=".01"
                                                 name="isl_premium_ind__pepm_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Enter premium PEPM" 
@@ -402,6 +403,7 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
+                                                step=".01"
                                                 name="isl_premium_fam_pepm_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Enter premium PEPM" 

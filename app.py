@@ -528,8 +528,9 @@ def save_plan_overview(client_id):
         premium_rows_to_insert = []
         premium_rows_to_update = []
 
+        # First, process all premium rows
         for key, values in submitted_data.items():
-            if key.startswith("premium_") or key.startswith("contribution_"):
+            if key.startswith("premium_"):
                 key_parts = key.split("_")
                 tier_number = f"{key_parts[1]} {key_parts[2]}"
                 plan_identifier = "_".join(key_parts[3:-2])
@@ -544,49 +545,83 @@ def save_plan_overview(client_id):
                         continue
 
                     system_tier_trans = tier_number
-                    contribution_key = key.replace("premium_", "contribution_", 1)
-                    contribution_values = submitted_data.get(contribution_key, [None])
+                    prem_amt = float(values[0]) if values else None
+                    hsa_amt_annual = hsa_data.get(key.split("_", 1)[1], None) if plan_type == "HDHP - HSA" else None
 
-                    for i, value in enumerate(values):
-                        contribution_value = float(contribution_values[i]) if contribution_values and contribution_values[i] else None
-                        prem_amt = float(value) if value else None
-                        hsa_amt_annual = hsa_data.get(key.split("_", 1)[1], None) if plan_type == "HDHP - HSA" else None
+                    premium_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_{tier_number}_{rate_description}"
 
-                        premium_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_{tier_number}_{rate_description}"
+                    # Check if this premium already exists in the database
+                    if premium_key in existing_premiums:
+                        premium_rows_to_update.append({
+                            "PremiumId": existing_premiums[premium_key]["PremiumId"],
+                            "PremAmt": prem_amt,
+                            "HSA_Amt_Annual": hsa_amt_annual,
+                        })
+                    else:
+                        premium_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "TierName": tier_name_mapping.get(plan_identifier, {}).get(system_tier_trans, "Unknown"),
+                            "RateDescription": rate_description,
+                            "PremAmt": prem_amt,
+                            "PremFreq": "Monthly",
+                            "PremAmt_Annual": prem_amt * 12 if prem_amt else None,
+                            "Ctr_Amt": None,  # Placeholder for contribution, to be updated later
+                            "Ctr_Amt_Annual": None,  # Placeholder for contribution, to be updated later
+                            "HSA_Elig": "Yes" if plan_type == "HDHP - HSA" else "No",
+                            "HSA_Freq_Pref": "Annual" if plan_type == "HDHP - HSA" else None,
+                            "HSA_Amt_Annual": hsa_amt_annual,
+                        })
 
-                        if premium_key in existing_premiums:
-                            premium_rows_to_update.append({
-                                "PremiumId": existing_premiums[premium_key]["PremiumId"],
-                                "PremAmt": prem_amt,
-                                "Ctr_Amt": contribution_value,
-                                "HSA_Amt_Annual": hsa_amt_annual,
-                            })
-                        else:
-                            premium_rows_to_insert.append({
-                                "PlanId": plan_id,
-                                "ClientId": client_id,
-                                "StartDate": plans_data[plan_identifier].get("start_date"),
-                                "SystemTierTrans": system_tier_trans,
-                                "TierName": tier_number,
-                                "RateDescription": rate_description,
-                                "PremAmt": prem_amt,
-                                "PremFreq": "Monthly",
-                                "PremAmt_Annual": prem_amt * 12 if prem_amt else None,
-                                "Ctr_Amt": contribution_value,
-                                "Ctr_Amt_Annual": contribution_value * 12 if contribution_value else None,
-                                "HSA_Elig": "Yes" if plan_type == "HDHP - HSA" else "No",
-                                "HSA_Freq_Pref": "Annual" if plan_type == "HDHP - HSA" else None,
-                                "HSA_Amt_Annual": hsa_amt_annual,
-                            })
+        # Now, process all contribution rows and match them to premiums
+        for key, values in submitted_data.items():
+            if key.startswith("contribution_"):
+                key_parts = key.split("_")
+                tier_number = f"{key_parts[1]} {key_parts[2]}"
+                plan_identifier = "_".join(key_parts[3:-2])
+                rate_description = key_parts[-1]
 
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    system_tier_trans = tier_number
+                    contribution_value = float(values[0]) if values else None
+
+                    # Find the matching premium key
+                    premium_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_{tier_number}_{rate_description}"
+
+                    # If we find a matching premium row, update it with the contribution value
+                    if premium_key in existing_premiums:
+                        premium_rows_to_update.append({
+                            "PremiumId": existing_premiums[premium_key]["PremiumId"],
+                            "Ctr_Amt": contribution_value,
+                            "Ctr_Amt_Annual": contribution_value * 12 if contribution_value else None,
+                        })
+
+                    # If no existing premium, add it to the premium rows with the contribution value
+                    else:
+                        # Find the corresponding premium row in the ones we are inserting
+                        for prem_row in premium_rows_to_insert:
+                            if prem_row["PlanId"] == plan_id and prem_row["SystemTierTrans"] == system_tier_trans and prem_row["RateDescription"] == rate_description:
+                                prem_row["Ctr_Amt"] = contribution_value
+                                prem_row["Ctr_Amt_Annual"] = contribution_value * 12 if contribution_value else None
+                                break
+
+        # Print debug information for inserted rows
         print(f"Premium Rows to Insert: {json.dumps(premium_rows_to_insert, indent=2)}")
         print(f"Premium Rows to Update: {json.dumps(premium_rows_to_update, indent=2)}")
 
-        # Insert new rows
+        # Insert new rows into Premium table
         if premium_rows_to_insert:
             supabase.table("Premium").insert(premium_rows_to_insert).execute()
 
-        # Update existing rows
+        # Update existing rows in Premium table
         for update_row in premium_rows_to_update:
             supabase.table("Premium").update(update_row).eq("PremiumId", update_row["PremiumId"]).execute()
 
