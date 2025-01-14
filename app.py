@@ -434,7 +434,6 @@ def plan_overview(client_id):
         csrf_token=csrf_token
     )
 
-
 @app.route('/client/<int:client_id>/save_plans', methods=['POST'])
 def save_plan_overview(client_id):
     from collections import defaultdict
@@ -451,16 +450,15 @@ def save_plan_overview(client_id):
 
         # Parse plans from the submitted data
         plans_data = defaultdict(dict)
-        tier_name_mapping = defaultdict(dict)  # Map enrollment tiers to tier names
-        hsa_data = {}  # Store HSA values for matching premium keys
+        tier_name_mapping = defaultdict(dict)
+        hsa_data = {}
 
-        # Populate tier_name_mapping from session tier_data
         for tier_set in tier_data.values():
             plans = tier_set.get("plans", [])
             tiers = tier_set.get("tiers", {})
             for plan in plans:
                 for tier_name, tier_info in tiers.items():
-                    if tier_info.get("tier_name"):  # Ensure the tier has a name
+                    if tier_info.get("tier_name"):
                         tier_name_mapping[plan][tier_name] = tier_info["tier_name"]
 
         print(f"Tier Name Mapping: {json.dumps(tier_name_mapping, indent=2)}")
@@ -471,8 +469,7 @@ def save_plan_overview(client_id):
                 attribute_key = key.split("][")[1].replace("]", "")
                 plans_data[plan_key][attribute_key] = value[0]
             elif key.startswith("hsa_"):
-                # Extract HSA key components and store the value for lookup
-                hsa_key_parts = key.split("_", 1)[1]  # Drop the "hsa_" prefix
+                hsa_key_parts = key.split("_", 1)[1]
                 hsa_data[hsa_key_parts] = float(value[0]) if value and value[0] else None
 
         print(f"Parsed Plans Data: {json.dumps(plans_data, indent=2)}")
@@ -514,92 +511,84 @@ def save_plan_overview(client_id):
             response = supabase.table("Plan").insert(new_plans).execute()
             print(f"Insert Response for Plans: {response}")
 
-        # Fetch all plans with IDs
+        # Refresh all_plans after inserting new plans
         all_plans_query = supabase.table("Plan").select("PlanId, PlanName").eq("ClientId", client_id).execute()
         all_plans = {plan["PlanName"]: plan["PlanId"] for plan in all_plans_query.data}
         print(f"All Plans with PlanIds: {json.dumps(all_plans, indent=2)}")
 
+        # Fetch existing premium data
+        existing_premiums_query = supabase.table("Premium").select("*").eq("ClientId", client_id).execute()
+        existing_premiums = {
+            f"{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['TierName']}_{row['RateDescription']}": row
+            for row in existing_premiums_query.data
+        }
+        print(f"Existing Premiums in DB: {json.dumps(existing_premiums, indent=2)}")
+
         # Process premiums and contributions
         premium_rows_to_insert = []
-        contribution_rows_to_insert = []
+        premium_rows_to_update = []
 
         for key, values in submitted_data.items():
             if key.startswith("premium_") or key.startswith("contribution_"):
-                print(f"Processing key: {key}")  # Debugging
-
-                # Parse the key to extract components
                 key_parts = key.split("_")
-
-                # Tier name includes both "Tier" and the number following it
                 tier_number = f"{key_parts[1]} {key_parts[2]}"
-                print(f"Extracted tier_number: {tier_number}")  # Debugging
-
-                # Plan identifier starts after "Tier" and tier number, up to the second-to-last component
                 plan_identifier = "_".join(key_parts[3:-2])
-                print(f"Extracted plan_identifier: {plan_identifier}")  # Debugging
-
-                # Rate description is the last component
                 rate_description = key_parts[-1]
-                print(f"Extracted rate_description: {rate_description}")  # Debugging
 
-                # Crosswalk to get the plan name from identifier
                 if plan_identifier in plans_data:
                     plan_name = plans_data[plan_identifier]["plan_name"]
-                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()  # Normalize spaces
-                    print(f"Matched plan_identifier to plan_name: {plan_identifier} -> {plan_name}, PlanType: {plan_type}")  # Debugging
-                else:
-                    print(f"Plan Identifier '{plan_identifier}' not found in plans_data.")
-                    continue
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
 
-                # Get the database-assigned PlanId
-                if plan_name in all_plans:
-                    plan_id = all_plans[plan_name]
-                    print(f"Matched plan_name to PlanId: {plan_name} -> {plan_id}")  # Debugging
-                else:
-                    print(f"Plan Name '{plan_name}' not found in all_plans.")
-                    continue
+                    if not plan_id:
+                        continue
 
-                # Retrieve the tier name from the tier mapping for the specific plan
-                if plan_identifier in tier_name_mapping:
-                    tier_name = tier_name_mapping[plan_identifier].get(tier_number, tier_number)
-                    print(f"Retrieved tier_name: {tier_name}")  # Debugging
-                else:
-                    print(f"No tier data found for Plan Identifier '{plan_identifier}'")
-                    tier_name = tier_number  # Default to "Tier 1", "Tier 2", etc.
+                    system_tier_trans = tier_number
+                    contribution_key = key.replace("premium_", "contribution_", 1)
+                    contribution_values = submitted_data.get(contribution_key, [None])
 
-                # Correct SystemTierTrans formatting
-                system_tier_trans = tier_number
-                print(f"Formatted SystemTierTrans: {system_tier_trans}")  # Debugging
+                    for i, value in enumerate(values):
+                        contribution_value = float(contribution_values[i]) if contribution_values and contribution_values[i] else None
+                        prem_amt = float(value) if value else None
+                        hsa_amt_annual = hsa_data.get(key.split("_", 1)[1], None) if plan_type == "HDHP - HSA" else None
 
-                # Match the HSA value for the premium key
-                hsa_key = "_".join(key.split("_", 1)[1:])  # Drop the "premium_" prefix
-                hsa_amt_annual = hsa_data.get(hsa_key, None)
+                        premium_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_{tier_number}_{rate_description}"
 
-                # Add rows for each value in the submitted data
-                for value in values:
-                    if key.startswith("premium_"):
-                        premium_row = {
-                            "PlanId": plan_id,
-                            "ClientId": client_id,
-                            "StartDate": plans_data[plan_identifier].get("start_date"),
-                            "SystemTierTrans": system_tier_trans,
-                            "TierName": tier_name,
-                            "RateDescription": rate_description,
-                            "PremAmt": float(value) if value else None,
-                            "PremFreq": "Monthly",
-                            "PremAmt_Annual": float(value) * 12 if value else None,
-                            "HSA_Elig": "Yes" if plan_type == "HDHP - HSA" else "No",
-                            "HSA_Freq_Pref": "Annual" if plan_type == "HDHP - HSA" else None,
-                            "HSA_Amt_Annual": hsa_amt_annual,
-                        }
-                        premium_rows_to_insert.append(premium_row)
+                        if premium_key in existing_premiums:
+                            premium_rows_to_update.append({
+                                "PremiumId": existing_premiums[premium_key]["PremiumId"],
+                                "PremAmt": prem_amt,
+                                "Ctr_Amt": contribution_value,
+                                "HSA_Amt_Annual": hsa_amt_annual,
+                            })
+                        else:
+                            premium_rows_to_insert.append({
+                                "PlanId": plan_id,
+                                "ClientId": client_id,
+                                "StartDate": plans_data[plan_identifier].get("start_date"),
+                                "SystemTierTrans": system_tier_trans,
+                                "TierName": tier_number,
+                                "RateDescription": rate_description,
+                                "PremAmt": prem_amt,
+                                "PremFreq": "Monthly",
+                                "PremAmt_Annual": prem_amt * 12 if prem_amt else None,
+                                "Ctr_Amt": contribution_value,
+                                "Ctr_Amt_Annual": contribution_value * 12 if contribution_value else None,
+                                "HSA_Elig": "Yes" if plan_type == "HDHP - HSA" else "No",
+                                "HSA_Freq_Pref": "Annual" if plan_type == "HDHP - HSA" else None,
+                                "HSA_Amt_Annual": hsa_amt_annual,
+                            })
 
         print(f"Premium Rows to Insert: {json.dumps(premium_rows_to_insert, indent=2)}")
+        print(f"Premium Rows to Update: {json.dumps(premium_rows_to_update, indent=2)}")
 
-        # Insert premiums
+        # Insert new rows
         if premium_rows_to_insert:
-            response = supabase.table("Premium").insert(premium_rows_to_insert).execute()
-            print(f"Insert Response for Premiums: {response}")
+            supabase.table("Premium").insert(premium_rows_to_insert).execute()
+
+        # Update existing rows
+        for update_row in premium_rows_to_update:
+            supabase.table("Premium").update(update_row).eq("PremiumId", update_row["PremiumId"]).execute()
 
         return jsonify({"message": "Plans and premiums saved successfully"}), 200
 
@@ -608,6 +597,5 @@ def save_plan_overview(client_id):
         return jsonify({"error": str(e)}), 500
 
 
-         
 if __name__ == '__main__':
     app.run(debug=True)

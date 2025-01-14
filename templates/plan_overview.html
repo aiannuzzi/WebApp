@@ -347,9 +347,12 @@ Plan Overview
                                         <th>Carrier</th>
                                         <th>Contract Type</th>
                                         <th>Deductible</th>
-                                        <th>Premium PEPM</th>
+                                        <th>Premium Individual PEPM</th>
+                                        <th>Premium Family PEPM</th>
                                         <th>Accumulating Policy</th>
                                         <th>Accumulating Deductible</th>
+                                        <th>Maximum ISL Reimbursement</th>
+
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -390,21 +393,33 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
-                                                name="isl_premium_pepm_{{ tab_id }}" 
+                                                name="isl_premium_ind__pepm_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Enter premium PEPM" 
-                                                data-summary="Premium PEPM">
+                                                data-summary="Premium Ind PEPM">
+                                        </td>
+
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="isl_premium_fam_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter premium PEPM" 
+                                                data-summary="Premium Fam PEPM">
                                         </td>
                             
                                         <!-- Accumulating Policy -->
                                         <td>
-                                            <input 
-                                                type="text" 
+                                            <select 
                                                 name="isl_acc_policy_{{ tab_id }}" 
                                                 class="form-control" 
-                                                placeholder="Enter accumulating policy" 
-                                                data-summary="Enter Value">
+                                                data-summary="Select Yes or No">
+                                                <option value="" disabled selected>Select Yes/No</option>
+                                                <option value="Yes">Yes</option>
+                                                <option value="No">No</option>
+                                            </select>
                                         </td>
+                                        
                             
                                         <!-- Accumulating Deductible -->
                                         <td>
@@ -413,6 +428,16 @@ Plan Overview
                                                 name="isl_acc_deductible_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Enter accumulating deductible" 
+                                                data-summary="Enter Value">
+                                        </td>
+
+                                        <!-- Max Reimb-->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="isl_max_deductible_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Enter Maximum Deductible" 
                                                 data-summary="Enter Value">
                                         </td>
                                     </tr>
