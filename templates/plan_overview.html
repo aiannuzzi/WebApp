@@ -317,7 +317,7 @@ Plan Overview
                                                 <input 
                                                     data-summary="Enter Value" 
                                                     type="text" 
-                                                    name="{{ rate_component | replace(' ', '_') }}_{{ tier_key | replace(' ', '_') }}" 
+                                                    name="{{ rate_component | replace(' ', '_') }}_{{ tier_key | replace(' ', '_') }}_{{tab_id}}" 
                                                     class="form-control form-control-sm" 
                                                     placeholder="Enter value">
                                             </td>
@@ -371,13 +371,23 @@ Plan Overview
                             
                                         <!-- Contract Type -->
                                         <td>
-                                            <input 
-                                                type="text" 
+                                            <select 
                                                 name="isl_contract_{{ tab_id }}" 
                                                 class="form-control" 
-                                                placeholder="Enter contract type" 
-                                                data-summary="Enter Value">
+                                                data-summary="Select a contract type">
+                                                <option value="Select Contract Type">Select Contract Type</option>
+                                                <option value="Paid">Paid</option>
+                                                <option value="Incurred 12 Paid 18">Incurred 12 Paid 18</option>
+                                                <option value="Incurred 24/Paid 12">Incurred 24/Paid 12</option>
+                                                <option value="Incurred 18/Paid 12">Incurred 18/Paid 12</option>
+                                                <option value="Incurred 15/Paid 12">Incurred 15/Paid 12</option>
+                                                <option value="Incurred 12 Paid 15">Incurred 12 Paid 15</option>
+                                                <option value="Incurred 12 Paid 18">Incurred 12 Paid 18</option>
+                                                <option value="Incurred 12 Paid 24">Incurred 12 Paid 24</option>
+                                                <option value="Incurred">Incurred</option>
+                                            </select>
                                         </td>
+
                             
                                         <!-- Deductible -->
                                         <td>
@@ -428,6 +438,7 @@ Plan Overview
                                             <input 
                                                 type="number" 
                                                 name="isl_acc_deductible_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter accumulating deductible" 
                                                 data-summary="Enter Value">
@@ -438,6 +449,7 @@ Plan Overview
                                             <input 
                                                 type="number" 
                                                 name="isl_max_deductible_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter Maximum Deductible" 
                                                 data-summary="Enter Value">
@@ -461,7 +473,8 @@ Plan Overview
                                         <th>Expected Claim Liability</th>
                                         <th>Maximum Claim Liability (PEPM)</th>
                                         <th>Corridor</th>
-                                        <th>Premium PEPM</th>
+                                        <th>Premium Indivdual PEPM</th>
+                                        <th>Premium Family PEPM</th>
                                         <th>Maximum Reimbursement</th>
                                     </tr>
                                 </thead>
@@ -484,6 +497,7 @@ Plan Overview
                                             <input 
                                                 type="number" 
                                                 name="asl_expected_claim_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter expected claim" 
                                                 data-summary="Enter Value">
@@ -494,6 +508,7 @@ Plan Overview
                                             <input 
                                                 type="number" 
                                                 name="asl_max_claim_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter maximum claim" 
                                                 data-summary="Enter Value">
@@ -506,16 +521,27 @@ Plan Overview
                                                 name="asl_corridor_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Enter corridor" 
-                                                min="0" 
-                                                max="100" 
+                                                
                                                 data-summary="Enter Value">
                                         </td>
                             
-                                        <!-- Premium PEPM -->
+                                        <!-- Premium Ind PEPM -->
                                         <td>
                                             <input 
                                                 type="number" 
-                                                name="asl_premium_pepm_{{ tab_id }}" 
+                                                name="asl_premium_ind_pepm_{{ tab_id }}" 
+                                                step=".01"
+                                                class="form-control" 
+                                                placeholder="Enter premium PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+
+                                        <!-- Premium Fam PEPM -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                name="asl_premium_fam_pepm_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter premium PEPM" 
                                                 data-summary="Enter Value">
@@ -526,6 +552,7 @@ Plan Overview
                                             <input 
                                                 type="number" 
                                                 name="asl_max_reimbursement_{{ tab_id }}" 
+                                                step=".01"
                                                 class="form-control" 
                                                 placeholder="Enter max reimbursement" 
                                                 data-summary="Enter Value">
@@ -556,12 +583,20 @@ Plan Overview
                                     <tr>
                                         <!-- Category -->
                                         <td>
-                                            <input 
-                                                type="text" 
+                                            <select 
                                                 name="fees_category_{{ tab_id }}" 
                                                 class="form-control" 
-                                                placeholder="Enter category" 
-                                                data-summary="Enter Value">
+                                                data-summary="Select a category">
+                                                <option value="Select Fee Type">Select Fee Type</option>
+                                                <option value="ASO">ASO</option>
+                                                <option value="Broker Commission">Broker Commission</option>
+                                                <option value="Network Access">Network Access</option>
+                                                <option value="3rd Party Program">3rd Party Program</option>
+                                                <option value="Rx Carve-out">Rx Carve-out</option>
+                                                <option value="Stop Loss Carve-out">Stop Loss Carve-out</option>
+                                                <option value="Banking Fees">Banking Fees</option>
+                                                <option value="Other">Other</option>
+                                            </select>
                                         </td>
                             
                                         <!-- Description -->
@@ -580,6 +615,7 @@ Plan Overview
                                                 type="number" 
                                                 name="fees_pepm_{{ tab_id }}" 
                                                 class="form-control" 
+                                                step=".01"
                                                 placeholder="Enter PEPM amount" 
                                                 data-summary="Enter Value">
                                         </td>

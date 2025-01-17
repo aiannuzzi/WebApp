@@ -364,6 +364,7 @@ def plan_overview(client_id):
 
     # Initialize plan_data
     plan_data = defaultdict(dict)
+    
 
     # Retrieve data from session
     active_plans = session.get('available_plans', [])
@@ -614,7 +615,7 @@ def save_plan_overview(client_id):
 
         
         # Step 1: Extract plan identifier from isl_carrier and prepare data structure
-        plan_identifiers = {}
+        isl_plan_identifiers = {}
         isl_data_to_insert = []
 
         # Iterate through all ISL fields in the submitted data
@@ -635,26 +636,26 @@ def save_plan_overview(client_id):
                         plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
                         if plan_query.data:
                             plan_id = plan_query.data[0]["PlanId"]
-                            plan_identifiers[plan_identifier] = plan_id  # Store the PlanId for later use
+                            isl_plan_identifiers[plan_identifier] = plan_id  # Store the PlanId for later use
 
                             # Create the ISL data row for the carrier field
                             isl_data = {
                                 "PlanId": plan_id,
                                 "ClientId": client_id,
                                 "ISLStartDate": plans_data[plan_identifier].get("start_date"),
-                                "ISLEndDate": plans_data[plan_identifier].get("start_date"),
+                                "ISLEndDate": plans_data[plan_identifier].get("end_date"),
                                 "ISLCarrier": field_value  # Add carrier field value
                             }
                             # Add the row to the insert list for the carrier field
                             isl_data_to_insert.append(isl_data)
 
                 # Step 3: Process other ISL fields based on the plan identifier and field name
-                if plan_identifier in plan_identifiers:
+                if plan_identifier in isl_plan_identifiers:
                     # Extract the field value (assuming the values list contains at least one value)
                     field_value = values[0] if values else None
 
                     # Step 4: Check for field names and update the corresponding ISL column
-                    isl_data = next((item for item in isl_data_to_insert if item["PlanId"] == plan_identifiers[plan_identifier]), None)
+                    isl_data = next((item for item in isl_data_to_insert if item["PlanId"] == isl_plan_identifiers[plan_identifier]), None)
 
                     if isl_data:
                         # Field updates based on the key content
@@ -678,7 +679,7 @@ def save_plan_overview(client_id):
                     else:
                         # If the ISL data row doesn't exist, create a new one
                         isl_data = {
-                            "PlanId": plan_identifiers[plan_identifier],
+                            "PlanId": isl_plan_identifiers[plan_identifier],
                             "ClientId": client_id,
                             "ISLCarrier": None,  # Default value (could be updated if needed)
                             "ISLContractType": None,
@@ -717,7 +718,188 @@ def save_plan_overview(client_id):
             print(f"Inserting ISL Data: {json.dumps(isl_data_to_insert, indent=2)}")
             supabase.table("ISL Policy").insert(isl_data_to_insert).execute()
 
-        return jsonify({"message": "ISL data updated!"}), 200
+
+        # Step 1: Extract plan identifier from isl_carrier and prepare data structure
+        asl_plan_identifiers = {}
+        asl_data_to_insert = []
+
+        # Iterate through all ISL fields in the submitted data
+        for key, values in submitted_data.items():
+            if key.startswith("asl_"):
+                # Step 1: Extract the plan identifier from the 'asl_carrier' key
+                if key.startswith("asl_carrier_"):
+                    key_parts = key.split("_")
+                    plan_identifier = "_".join(key_parts[2:-1])  # Extract everything except 'asl_carrier' and the last number
+
+                    # Extract the field value for 'carrier'
+                    field_value = values[0] if values else None
+
+                    # Step 2: Get the plan name and fetch the PlanId from the database
+                    plan_name = plans_data.get(plan_identifier, {}).get("plan_name")
+                    if plan_name:
+                        print(f"Fetching PlanId for Plan Name: {plan_name}")
+                        plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
+                        if plan_query.data:
+                            plan_id = plan_query.data[0]["PlanId"]
+                            asl_plan_identifiers[plan_identifier] = plan_id  # Store the PlanId for later use
+
+                            # Create the ASL data row for the carrier field
+                            asl_data = {
+                                "PlanId": plan_id,
+                                "ClientId": client_id,
+                                "AggStartDate": plans_data[plan_identifier].get("start_date"),
+                                "AggEndDate": plans_data[plan_identifier].get("end_date"),
+                                "AggCarrier": field_value  # Add carrier field value
+                            }
+                            # Add the row to the insert list for the carrier field
+                            asl_data_to_insert.append(asl_data)
+
+                # Step 3: Process other ASL fields based on the plan identifier and field name
+                if plan_identifier in asl_plan_identifiers:
+                    # Extract the field value (assuming the values list contains at least one value)
+                    field_value = values[0] if values else None
+
+                    # Step 4: Check for field names and update the corresponding ISL column
+                    asl_data = next((item for item in asl_data_to_insert if item["PlanId"] == asl_plan_identifiers[plan_identifier]), None)
+
+                    if asl_data:
+                        # Field updates based on the key content
+                        if 'asl_expected_claim' in key and plan_identifier in key:
+                            asl_data["AggExpClaims"] = field_value
+                        elif 'asl_corridor' in key and plan_identifier in key:
+                            asl_data["AggCorr"] = field_value
+                        elif 'asl_premium_ind_pepm' in key and plan_identifier in key:
+                            asl_data["AggPremSingle"] = field_value
+                        elif 'asl_premium_fam_pepm' in key and plan_identifier in key:
+                            asl_data["AggPremFamily"] = field_value
+                        elif 'asl_max_reimbursement' in key and plan_identifier in key:
+                            asl_data["AggMaxReimb"] = field_value
+                        
+                        # Debug: Print the updated ISL data
+                        print(f"Updated ASL Data for {key}: {json.dumps(asl_data, indent=2)}")
+                    else:
+                        # If the ISL data row doesn't exist, create a new one
+                        asl_data = {
+                            "PlanId": isl_plan_identifiers[plan_identifier],
+                            "ClientId": client_id,
+                            "ASLCarrier": None,  # Default value (could be updated if needed)
+                            
+                        }
+
+                        # Update the new ISL data row with the field value based on the key
+                        if 'expected_claim' in key and plan_identifier in key:
+                            asl_data["AggExpClaims"] = field_value
+                        elif 'corridor' in key and plan_identifier in key:
+                            asl_data["AggCorr"] = field_value
+                        elif 'premium_ind' in key and plan_identifier in key:
+                            asl_data["AggPremSingle"] = field_value
+                        elif 'premium_fam' in key and plan_identifier in key:
+                            asl_data["AggPremFamily"] = field_value
+                        elif 'max_reimbursement' in key and plan_identifier in key:
+                            asl_data["AggMaxReimb"] = field_value
+                        
+
+                        # Add the new ISL data row to the insert list
+                        asl_data_to_insert.append(asl_data)
+
+                # Debug: Print the ISL data to insert
+                print(f"ASL Data to Insert: {json.dumps(asl_data_to_insert, indent=2)}")
+
+        # Step 5: Insert all ISL data into the database
+        if asl_data_to_insert:
+            print(f"Inserting ASL Data: {json.dumps(asl_data_to_insert, indent=2)}")
+            supabase.table("ASL Policy").insert(asl_data_to_insert).execute()
+
+        # Step 1: Extract plan identifier from isl_carrier and prepare data structure
+        fee_plan_identifiers = {}
+        fee_data_to_insert = []
+
+        # Iterate through all ISL fields in the submitted data
+        for key, values in submitted_data.items():
+            if key.startswith("fees_"):
+                # Step 1: Extract the plan identifier from the 'fee_carrier' key
+                if key.startswith("fees_category_"):
+                    key_parts = key.split("_")
+                    plan_identifier = "_".join(key_parts[2:-1])  
+
+                    # Extract the field value for 'category'
+                    field_value = values[0] if values else None
+
+                    # Step 2: Get the plan name and fetch the PlanId from the database
+                    plan_name = plans_data.get(plan_identifier, {}).get("plan_name")
+                    if plan_name:
+                        print(f"Fetching PlanId for Plan Name: {plan_name}")
+                        plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
+                        if plan_query.data:
+                            plan_id = plan_query.data[0]["PlanId"]
+                            fee_plan_identifiers[plan_identifier] = plan_id  # Store the PlanId for later use
+
+                            # Create the ISL data row for the carrier field
+                            fee_data = {
+                                "PlanId": plan_id,
+                                "ClientId": client_id,
+                                "StartDate": plans_data[plan_identifier].get("start_date"),
+                                "EndDate": plans_data[plan_identifier].get("end_date"),
+                                "Category": field_value
+                                
+                            }
+                            # Add the row to the insert list for the carrier field
+                            fee_data_to_insert.append(fee_data)
+
+                # Step 3: Process other fee fields based on the plan identifier and field name
+                if plan_identifier in fee_plan_identifiers:
+                    # Extract the field value (assuming the values list contains at least one value)
+                    field_value = values[0] if values else None
+
+                    # Step 4: Check for field names and update the corresponding ISL column
+                    fee_data = next((item for item in fee_data_to_insert if item["PlanId"] == fee_plan_identifiers[plan_identifier]), None)
+
+                    if fee_data:
+                        # Field updates based on the key content
+                        if 'description' in key and plan_identifier in key:
+                            fee_data["FeeDesc"] = field_value
+                        
+                        elif 'pepm' in key and plan_identifier in key:
+                            fee_data["FeeAmt"] = field_value
+                        
+                        
+                        # Debug: Print the updated Fee data
+                        print(f"Updated Fee Data for {key}: {json.dumps(fee_data, indent=2)}")
+                    else:
+                        # If the fee data row doesn't exist, create a new one
+                        fee_data = {
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("end_date"),
+                            "Category": field_value
+                            
+                        }
+
+                        # Update the new ISL data row with the field value based on the key
+                        # Field updates based on the key content
+                        if 'description' in key and plan_identifier in key:
+                            fee_data["FeeDesc"] = field_value
+                        
+                        elif 'pepm' in key and plan_identifier in key:
+                            fee_data["FeeAmt"] = field_value
+                            fee_data["FeeAmt_Annual"]=field_value*12
+                        
+
+                        # Add the new ISL data row to the insert list
+                        fee_data_to_insert.append(fee_data)
+
+                # Debug: Print the ISL data to insert
+                print(f"Fee Data to Insert: {json.dumps(fee_data_to_insert, indent=2)}")
+
+        # Step 5: Insert all ISL data into the database
+        if fee_data_to_insert:
+            print(f"Inserting Fee Data: {json.dumps(fee_data_to_insert, indent=2)}")
+            supabase.table("Fee").insert(fee_data_to_insert).execute()
+
+
+
+        return jsonify({"message": "Updated :)!"}), 200
 
 
 
