@@ -316,7 +316,8 @@ Plan Overview
                                             <td>
                                                 <input 
                                                     data-summary="Enter Value" 
-                                                    type="text" 
+                                                    type="number" 
+                                                    step=".01"
                                                     name="{{ rate_component | replace(' ', '_') }}_{{ tier_key | replace(' ', '_') }}_{{tab_id}}" 
                                                     class="form-control form-control-sm" 
                                                     placeholder="Enter value">

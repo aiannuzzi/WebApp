@@ -805,7 +805,7 @@ def save_plan_overview(client_id):
                 # Debug: Print the ISL data to insert
                 print(f"ASL Data to Insert: {json.dumps(asl_data_to_insert, indent=2)}")
 
-        # Step 5: Insert all ISL data into the database
+        # Step 5: Insert all ASL data into the database
         if asl_data_to_insert:
             print(f"Inserting ASL Data: {json.dumps(asl_data_to_insert, indent=2)}")
             supabase.table("ASL Policy").insert(asl_data_to_insert).execute()
@@ -814,7 +814,7 @@ def save_plan_overview(client_id):
         fee_plan_identifiers = {}
         fee_data_to_insert = []
 
-        # Iterate through all ISL fields in the submitted data
+        # Iterate through all fees fields in the submitted data
         for key, values in submitted_data.items():
             if key.startswith("fees_"):
                 # Step 1: Extract the plan identifier from the 'fee_carrier' key
@@ -897,6 +897,76 @@ def save_plan_overview(client_id):
             print(f"Inserting Fee Data: {json.dumps(fee_data_to_insert, indent=2)}")
             supabase.table("Fee").insert(fee_data_to_insert).execute()
 
+        # Fetch existing premium data
+        existing_admin_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
+        existing_admin = {
+            f"{row['RateId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}": row
+            for row in existing_admin_query.data
+        }
+        
+        LF_admin_rows_to_insert = []
+        LF_admin_rows_to_update = []
+
+        # Process all lf admin rows
+        for key, values in submitted_data.items():
+            if key.startswith("Admin_Fees_"):
+                print(key)
+                key_parts = key.split("_")
+                system_tier_trans = f"{key_parts[2]} {key_parts[3]}"
+                print(system_tier_trans)
+                plan_identifier = "_".join(key_parts[4:-1])
+                print(plan_identifier)
+                field_value=values[0]
+                
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    
+                    
+                    
+
+                    admin_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}"
+                    
+                    # Check if this premium already exists in the database
+                    if admin_key in existing_admin:
+                        LF_admin_rows_to_update.append({
+                            "RateId": existing_premiums[admin_key]["RateId"],
+                            "RateAmt": field_value,
+                            "RateAmt_Annual": field_value * 12,
+                        })
+                    else:
+                        LF_admin_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "Component": "Admin Fee",
+                            "RateAmt": field_value,
+                            
+                            "RateFreq": "Monthly",
+                            "RateAmt_Annual": float(field_value) * 12 ,
+                            
+                        })
+
+        
+        # Print debug information for inserted rows
+        print(f"LF Rows to Insert: {json.dumps(LF_admin_rows_to_insert, indent=2)}")
+        print(f"LF Rows to Update: {json.dumps(LF_admin_rows_to_update, indent=2)}")
+
+        # Insert new rows into lf table
+        if LF_admin_rows_to_insert:
+            supabase.table("LF Rate Detail").insert(LF_admin_rows_to_insert).execute()
+
+        # Update existing rows in lf table
+        for update_row in LF_admin_rows_to_update:
+            supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
 
 
         return jsonify({"message": "Updated :)!"}), 200
