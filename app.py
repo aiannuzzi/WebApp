@@ -900,7 +900,7 @@ def save_plan_overview(client_id):
         # Fetch existing premium data
         existing_admin_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
         existing_admin = {
-            f"{row['RateId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}": row
+            f"{row['RateId']}_{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['Component']}": row
             for row in existing_admin_query.data
         }
         
@@ -931,7 +931,7 @@ def save_plan_overview(client_id):
                     
                     
 
-                    admin_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}"
+                    admin_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_'Admin Fee'"
                     
                     # Check if this premium already exists in the database
                     if admin_key in existing_admin:
@@ -969,9 +969,300 @@ def save_plan_overview(client_id):
             supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
 
 
+        # Fetch existingdata
+        existing_lf_isl_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
+        existing_lf_isl = {
+            f"{row['RateId']}_{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['Component']}": row
+            for row in existing_lf_isl_query.data
+        }
+
+        LF_isl_rows_to_insert = []
+        LF_isl_rows_to_update = []
+
+        # Process all lf admin rows
+        for key, values in submitted_data.items():
+            if key.startswith("Individual_Stop_Loss_"):
+                print(key)
+                key_parts = key.split("_")
+                system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
+                print(system_tier_trans)
+                plan_identifier = "_".join(key_parts[5:-1])
+                print(plan_identifier)
+                field_value=values[0]
+                
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    
+                    
+                    
+
+                    lf_isl_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_'Individual Stop Loss'"
+                    
+                    # Check if this premium already exists in the database
+                    if lf_isl_key in existing_lf_isl:
+                        LF_isl_rows_to_update.append({
+                            "RateId": existing_lf_isl[lf_isl_key]["RateId"],
+                            "RateAmt": field_value,
+                            "RateAmt_Annual": field_value * 12,
+                        })
+                    else:
+                        LF_isl_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "Component": "Individual Stop Loss",
+                            "RateAmt": field_value,
+                            
+                            "RateFreq": "Monthly",
+                            "RateAmt_Annual": float(field_value) * 12 ,
+                            
+                        })
+
+        
+        # Print debug information for inserted rows
+        print(f"LF Rows to Insert: {json.dumps(LF_isl_rows_to_insert, indent=2)}")
+        print(f"LF Rows to Update: {json.dumps(LF_isl_rows_to_update, indent=2)}")
+
+        # Insert new rows into lf table
+        if LF_isl_rows_to_insert:
+            supabase.table("LF Rate Detail").insert(LF_isl_rows_to_insert).execute()
+
+        # Update existing rows in lf t
+        for update_row in LF_isl_rows_to_update:
+            supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
+
+        # Fetch existingdata
+        existing_lf_asl_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
+        existing_lf_asl = {
+            f"{row['RateId']}_{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['Component']}": row
+            for row in existing_lf_isl_query.data
+        }
+
+        LF_asl_rows_to_insert = []
+        LF_asl_rows_to_update = []
+
+        # Process all lf admin rows
+        for key, values in submitted_data.items():
+            if key.startswith("Aggregate_Stop_Loss_"):
+                print(key)
+                key_parts = key.split("_")
+                system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
+                print(system_tier_trans)
+                plan_identifier = "_".join(key_parts[5:-1])
+                print(plan_identifier)
+                field_value=values[0]
+                
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    
+                    
+                    
+
+                    lf_asl_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_'Aggregate Stop Loss'"
+                    
+                    # Check if this premium already exists in the database
+                    if lf_asl_key in existing_lf_asl_query:
+                        LF_asl_rows_to_update.append({
+                            "RateId": existing_lf_asl[lf_asl_key]["RateId"],
+                            "RateAmt": field_value,
+                            "RateAmt_Annual": field_value * 12,
+                        })
+                    else:
+                        LF_asl_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "Component": "Aggregate Stop Loss",
+                            "RateAmt": field_value,
+                            
+                            "RateFreq": "Monthly",
+                            "RateAmt_Annual": float(field_value) * 12 ,
+                            
+                        })
+
+        
+        # Print debug information for inserted rows
+        print(f"LF Rows to Insert: {json.dumps(LF_asl_rows_to_insert, indent=2)}")
+        print(f"LF Rows to Update: {json.dumps(LF_asl_rows_to_update, indent=2)}")
+
+        # Insert new rows into lf table
+        if LF_asl_rows_to_insert:
+            supabase.table("LF Rate Detail").insert(LF_asl_rows_to_insert).execute()
+
+        # Update existing rows in lf t
+        for update_row in LF_asl_rows_to_update:
+            supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
+
+
+        
+
+        # Fetch existingdata
+        existing_lf_claims_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
+        existing_lf_claims = {
+            f"{row['RateId']}_{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['Component']}": row
+            for row in existing_lf_isl_query.data
+        }
+
+        LF_claims_rows_to_insert = []
+        LF_claims_rows_to_update = []
+
+        # Process all lf admin rows
+        for key, values in submitted_data.items():
+            if key.startswith("Claims_Funding_Budget_"):
+                print(key)
+                key_parts = key.split("_")
+                system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
+                print(system_tier_trans)
+                plan_identifier = "_".join(key_parts[5:-1])
+                print(plan_identifier)
+                field_value=values[0]
+                
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    
+                    
+                    
+
+                    lf_claims_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_'Aggregate Stop Loss'"
+                    
+                    # Check if this premium already exists in the database
+                    if lf_claims_key in existing_lf_claims_query:
+                        LF_claims_rows_to_update.append({
+                            "RateId": existing_lf_claims[lf_claims_key]["RateId"],
+                            "RateAmt": field_value,
+                            "RateAmt_Annual": field_value * 12,
+                        })
+                    else:
+                        LF_claims_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "Component": "Claims Funding Budget",
+                            "RateAmt": field_value,
+                            
+                            "RateFreq": "Monthly",
+                            "RateAmt_Annual": float(field_value) * 12 ,
+                            
+                        })
+
+        
+        # Print debug information for inserted rows
+        print(f"LF Rows to Insert: {json.dumps(LF_claims_rows_to_insert, indent=2)}")
+        print(f"LF Rows to Update: {json.dumps(LF_claims_rows_to_update, indent=2)}")
+
+        # Insert new rows into lf table
+        if LF_claims_rows_to_insert:
+            supabase.table("LF Rate Detail").insert(LF_claims_rows_to_insert).execute()
+
+        # Update existing rows in lf t
+        for update_row in LF_claims_rows_to_update:
+            supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
+
+
+        
+        
+        
+        # Fetch existingdata
+        existing_lf_rebate_query = supabase.table("LF Rate Detail").select("*").eq("ClientId", client_id).execute()
+        existing_lf_rebate = {
+            f"{row['RateId']}_{row['PlanId']}_{row['ClientId']}_{row['StartDate']}_{row['SystemTierTrans']}_{row['Component']}": row
+            for row in existing_lf_rebate_query.data
+        }
+
+        LF_rebate_rows_to_insert = []
+        LF_rebate_rows_to_update = []
+
+        # Process all lf admin rows
+        for key, values in submitted_data.items():
+            if key.startswith("Rx_Rebate_Offset_"):
+                print(key)
+                key_parts = key.split("_")
+                system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
+                print(system_tier_trans)
+                plan_identifier = "_".join(key_parts[5:-1])
+                print(plan_identifier)
+                field_value=values[0]
+                
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_type = plans_data[plan_identifier].get("plan_type", "").strip().upper()
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    
+                    
+                    
+
+                    lf_rebate_key = f"{plan_id}_{client_id}_{plans_data[plan_identifier].get('start_date')}_{system_tier_trans}_'Aggregate Stop Loss'"
+                    
+                    # Check if this premium already exists in the database
+                    if lf_rebate_key in existing_lf_rebate_query:
+                        LF_claims_rows_to_update.append({
+                            "RateId": existing_lf_claims[lf_claims_key]["RateId"],
+                            "RateAmt": field_value*-1,
+                            "RateAmt_Annual": field_value * -12,
+                        })
+                    else:
+                        LF_rebate_rows_to_insert.append({
+                            "PlanId": plan_id,
+                            "ClientId": client_id,
+                            "StartDate": plans_data[plan_identifier].get("start_date"),
+                            "EndDate": plans_data[plan_identifier].get("start_date"),
+                            "SystemTierTrans": system_tier_trans,
+                            "Component": "Rx Rebate Offset",
+                            "RateAmt": float(field_value)*-1,
+                            
+                            "RateFreq": "Monthly",
+                            "RateAmt_Annual": float(field_value) * -12 ,
+                            
+                        })
+
+        
+        # Print debug information for inserted rows
+        print(f"LF Rows to Insert: {json.dumps(LF_rebate_rows_to_insert, indent=2)}")
+        print(f"LF Rows to Update: {json.dumps(LF_rebate_rows_to_update, indent=2)}")
+
+        # Insert new rows into lf table
+        if LF_rebate_rows_to_insert:
+            supabase.table("LF Rate Detail").insert(LF_rebate_rows_to_insert).execute()
+
+        # Update existing rows in lf t
+        for update_row in LF_rebate_rows_to_update:
+            supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
+
+
         return jsonify({"message": "Updated :)!"}), 200
-
-
+        
 
     except Exception as e:
         print(f"Error in save_plan_overview: {str(e)}")
