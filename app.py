@@ -601,9 +601,7 @@ def save_plan_overview(client_id):
                                 prem_row["Ctr_Amt_Annual"] = contribution_value * 12 if contribution_value else None
                                 break
 
-        # Print debug information for inserted rows
-        print(f"Premium Rows to Insert: {json.dumps(premium_rows_to_insert, indent=2)}")
-        print(f"Premium Rows to Update: {json.dumps(premium_rows_to_update, indent=2)}")
+        
 
         # Insert new rows into Premium table
         if premium_rows_to_insert:
@@ -632,7 +630,7 @@ def save_plan_overview(client_id):
                     # Step 2: Get the plan name and fetch the PlanId from the database
                     plan_name = plans_data.get(plan_identifier, {}).get("plan_name")
                     if plan_name:
-                        print(f"Fetching PlanId for Plan Name: {plan_name}")
+                        
                         plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
                         if plan_query.data:
                             plan_id = plan_query.data[0]["PlanId"]
@@ -674,8 +672,7 @@ def save_plan_overview(client_id):
                         elif 'isl_max_deductible' in key and plan_identifier in key:
                             isl_data["ISLMaxReimb"] = field_value if field_value else None
 
-                        # Debug: Print the updated ISL data
-                        print(f"Updated ISL Data for {key}: {json.dumps(isl_data, indent=2)}")
+                        
                     else:
                         # If the ISL data row doesn't exist, create a new one
                         isl_data = {
@@ -710,12 +707,11 @@ def save_plan_overview(client_id):
                         # Add the new ISL data row to the insert list
                         isl_data_to_insert.append(isl_data)
 
-                # Debug: Print the ISL data to insert
-                print(f"ISL Data to Insert: {json.dumps(isl_data_to_insert, indent=2)}")
+                
 
         # Step 5: Insert all ISL data into the database
         if isl_data_to_insert:
-            print(f"Inserting ISL Data: {json.dumps(isl_data_to_insert, indent=2)}")
+            
             supabase.table("ISL Policy").insert(isl_data_to_insert).execute()
 
 
@@ -737,7 +733,7 @@ def save_plan_overview(client_id):
                     # Step 2: Get the plan name and fetch the PlanId from the database
                     plan_name = plans_data.get(plan_identifier, {}).get("plan_name")
                     if plan_name:
-                        print(f"Fetching PlanId for Plan Name: {plan_name}")
+                        
                         plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
                         if plan_query.data:
                             plan_id = plan_query.data[0]["PlanId"]
@@ -775,8 +771,7 @@ def save_plan_overview(client_id):
                         elif 'asl_max_reimbursement' in key and plan_identifier in key:
                             asl_data["AggMaxReimb"] = field_value
                         
-                        # Debug: Print the updated ISL data
-                        print(f"Updated ASL Data for {key}: {json.dumps(asl_data, indent=2)}")
+                        
                     else:
                         # If the ISL data row doesn't exist, create a new one
                         asl_data = {
@@ -802,12 +797,11 @@ def save_plan_overview(client_id):
                         # Add the new ISL data row to the insert list
                         asl_data_to_insert.append(asl_data)
 
-                # Debug: Print the ISL data to insert
-                print(f"ASL Data to Insert: {json.dumps(asl_data_to_insert, indent=2)}")
+                
 
         # Step 5: Insert all ASL data into the database
         if asl_data_to_insert:
-            print(f"Inserting ASL Data: {json.dumps(asl_data_to_insert, indent=2)}")
+            
             supabase.table("ASL Policy").insert(asl_data_to_insert).execute()
 
         # Step 1: Extract plan identifier from isl_carrier and prepare data structure
@@ -828,7 +822,7 @@ def save_plan_overview(client_id):
                     # Step 2: Get the plan name and fetch the PlanId from the database
                     plan_name = plans_data.get(plan_identifier, {}).get("plan_name")
                     if plan_name:
-                        print(f"Fetching PlanId for Plan Name: {plan_name}")
+                        
                         plan_query = supabase.table("Plan").select("PlanId").eq("PlanName", plan_name).execute()
                         if plan_query.data:
                             plan_id = plan_query.data[0]["PlanId"]
@@ -889,8 +883,7 @@ def save_plan_overview(client_id):
                         # Add the new ISL data row to the insert list
                         fee_data_to_insert.append(fee_data)
 
-                # Debug: Print the ISL data to insert
-                print(f"Fee Data to Insert: {json.dumps(fee_data_to_insert, indent=2)}")
+                
 
         # Step 5: Insert all ISL data into the database
         if fee_data_to_insert:
@@ -910,12 +903,12 @@ def save_plan_overview(client_id):
         # Process all lf admin rows
         for key, values in submitted_data.items():
             if key.startswith("Admin_Fees_"):
-                print(key)
+                
                 key_parts = key.split("_")
                 system_tier_trans = f"{key_parts[2]} {key_parts[3]}"
-                print(system_tier_trans)
+                
                 plan_identifier = "_".join(key_parts[4:-1])
-                print(plan_identifier)
+                
                 field_value=values[0]
                 
 
@@ -956,9 +949,7 @@ def save_plan_overview(client_id):
                         })
 
         
-        # Print debug information for inserted rows
-        print(f"LF Rows to Insert: {json.dumps(LF_admin_rows_to_insert, indent=2)}")
-        print(f"LF Rows to Update: {json.dumps(LF_admin_rows_to_update, indent=2)}")
+    
 
         # Insert new rows into lf table
         if LF_admin_rows_to_insert:
@@ -982,12 +973,12 @@ def save_plan_overview(client_id):
         # Process all lf admin rows
         for key, values in submitted_data.items():
             if key.startswith("Individual_Stop_Loss_"):
-                print(key)
+                
                 key_parts = key.split("_")
                 system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
                 print(system_tier_trans)
                 plan_identifier = "_".join(key_parts[5:-1])
-                print(plan_identifier)
+                
                 field_value=values[0]
                 
 
@@ -1053,7 +1044,7 @@ def save_plan_overview(client_id):
         # Process all lf admin rows
         for key, values in submitted_data.items():
             if key.startswith("Aggregate_Stop_Loss_"):
-                print(key)
+                
                 key_parts = key.split("_")
                 system_tier_trans = f"{key_parts[3]} {key_parts[4]}"
                 print(system_tier_trans)
@@ -1248,9 +1239,7 @@ def save_plan_overview(client_id):
                         })
 
         
-        # Print debug information for inserted rows
-        print(f"LF Rows to Insert: {json.dumps(LF_rebate_rows_to_insert, indent=2)}")
-        print(f"LF Rows to Update: {json.dumps(LF_rebate_rows_to_update, indent=2)}")
+        
 
         # Insert new rows into lf table
         if LF_rebate_rows_to_insert:
@@ -1260,6 +1249,87 @@ def save_plan_overview(client_id):
         for update_row in LF_rebate_rows_to_update:
             supabase.table("LF Rate Detail").update(update_row).eq("RateId", update_row["RateId"]).execute()
 
+        #FI Details
+        insured_policy_rows_to_insert = []
+        insured_policy_rows_to_update = []
+
+        # Fetch existing insured policy data
+        existing_insured_policies_query = supabase.table("Insured Policy Details").select("*").eq("ClientId", client_id).execute()
+        existing_insured_policies = {
+            row["PlanId"]: row for row in existing_insured_policies_query.data
+        }
+
+        # Fetch plan data to get LOC values
+        plans_with_loc_query = supabase.table("Plan").select("PlanId, LOC").eq("ClientId", client_id).execute()
+        plans_with_loc = {plan["PlanId"]: plan["LOC"] for plan in plans_with_loc_query.data}
+
+        # Create a mapping to aggregate values by PlanId
+        insured_policy_data = defaultdict(lambda: {
+            "PlanId": None,
+            "ClientId": client_id,
+            "StartDate": None,
+            "EndDate": None,
+            "LOC": None,
+            "RetentionPEPM": None,
+            "ClaimsPEPM": None,
+            "RxRebateOffsetPEPM": None,
+            "PoolingLevel": None,
+            "PoolingFeePEPM": None,
+        })
+
+        # Process all insured policy rows
+        for key, values in submitted_data.items():
+            if key.startswith(("retention_pepm_", "claims_funding_", "rebate_pepm_", "pooling_level_", "pooling_pepm_")):
+                key_parts = key.split("_")
+                plan_identifier = "_".join(key_parts[2:-1])  # Extract plan identifier
+                field_name = "_".join(key_parts[:2])  # Determine which field this corresponds to (e.g., retention_pepm)
+                field_value = values[0]  # Retrieve the value submitted for this field
+
+                if plan_identifier in plans_data:
+                    plan_name = plans_data[plan_identifier]["plan_name"]
+                    plan_id = all_plans.get(plan_name)
+
+                    if not plan_id:
+                        continue
+
+                    # Get LOC for the plan from the Plan table
+                    loc_value = plans_with_loc.get(plan_id, None)
+
+                    # Map form field names to table columns
+                    column_mapping = {
+                        "retention_pepm": "RetentionPEPM",
+                        "claims_funding": "ClaimsPEPM",
+                        "rebate_pepm": "RxRebateOffsetPEPM",
+                        "pooling_level": "PoolingLevel",
+                        "pooling_pepm": "PoolingFeePEPM",
+                    }
+                    column_name = column_mapping[field_name]
+
+                    # Aggregate values for this plan
+                    insured_policy_data[plan_id]["PlanId"] = plan_id
+                    insured_policy_data[plan_id]["StartDate"] = plans_data[plan_identifier].get("start_date")
+                    insured_policy_data[plan_id]["EndDate"] = plans_data[plan_identifier].get("end_date")
+                    insured_policy_data[plan_id]["LOC"] = loc_value
+                    insured_policy_data[plan_id][column_name] = field_value
+
+        # Process rows for insertion or update
+        for plan_id, policy_data in insured_policy_data.items():
+            if plan_id in existing_insured_policies:
+                # Prepare update row
+                update_row = {"InsuredPolicyId": existing_insured_policies[plan_id]["InsuredPolicyId"]}
+                update_row.update({k: v for k, v in policy_data.items() if v is not None})
+                insured_policy_rows_to_update.append(update_row)
+            else:
+                # Prepare insert row
+                insured_policy_rows_to_insert.append(policy_data)
+
+        # Insert new rows into the Insured Policy Details table
+        if insured_policy_rows_to_insert:
+            supabase.table("Insured Policy Details").insert(insured_policy_rows_to_insert).execute()
+
+        # Update existing rows in the Insured Policy Details table
+        for update_row in insured_policy_rows_to_update:
+            supabase.table("Insured Policy Details").update(update_row).eq("InsuredPolicyId", update_row["InsuredPolicyId"]).execute()
 
         return jsonify({"message": "Updated :)!"}), 200
         

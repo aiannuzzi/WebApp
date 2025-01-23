@@ -693,7 +693,9 @@ Plan Overview
                                         <th>Calculated Budget</th>
                                         <th>Retention PEPM</th>
                                         <th>Claims Funding PEPM</th>
-                                        <th>Rx Rebate Offset</th>
+                                        <th>Rx Rebate Offset PEPM</th>
+                                        <th>Pooling Level</th>
+                                        <th>Pooling Fee PEPM</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -701,8 +703,9 @@ Plan Overview
                                         <!-- Calculated Budget -->
                                         <td>
                                             <input 
-                                                type="text" 
-                                                name="fees_description_{{ tab_id }}" 
+                                                type="number" 
+                                                step=".01"
+                                                name="calculated_budget_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Calculated Budget" 
                                                 data-summary="Enter Value">
@@ -712,7 +715,8 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
-                                                name="fees_pepm_{{ tab_id }}" 
+                                                step=".01"
+                                                name="retention_pepm_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Retention PEPM" 
                                                 data-summary="Enter Value">
@@ -721,8 +725,9 @@ Plan Overview
                                         <!-- Claims Funding PEPM -->
                                         <td>
                                             <input 
-                                                type="text" 
-                                                name="fees_description_{{ tab_id }}" 
+                                                type="number" 
+                                                step=".01"
+                                                name="claims_funding_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Claims Funding PEPM" 
                                                 data-summary="Enter Value">
@@ -732,9 +737,32 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
-                                                name="fees_pepm_{{ tab_id }}" 
+                                                step=".01"
+                                                name="rebate_pepm_{{ tab_id }}" 
                                                 class="form-control" 
-                                                placeholder="Rx Rebate Offset" 
+                                                placeholder="Rx Rebate Offset PEPM" 
+                                                data-summary="Enter Value">
+                                        </td>
+
+                                        <!-- Pooling Level -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                step=".01"
+                                                name="pooling_level_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Pooling Level" 
+                                                data-summary="Enter Value">
+                                        </td>
+
+                                        <!-- Pooling Fee -->
+                                        <td>
+                                            <input 
+                                                type="number" 
+                                                step=".01"
+                                                name="pooling_pepm_{{ tab_id }}" 
+                                                class="form-control" 
+                                                placeholder="Pooling Fee PEPM" 
                                                 data-summary="Enter Value">
                                         </td>
                                     </tr>
