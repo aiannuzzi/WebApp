@@ -168,6 +168,12 @@ Plan Overview
                                             value="{{ plan_info.get('start_date', '') }}" 
                                         />
 
+                                        <input 
+                                            type="hidden" 
+                                            name="plans[{{ tab_id }}][end_date]" 
+                                            value="{{ plan_info.get('end_date', '') }}" 
+                                        />
+
 
             
                                     </tr>
@@ -581,11 +587,12 @@ Plan Overview
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    {% for i in range(6) %}
                                     <tr>
                                         <!-- Category -->
                                         <td>
                                             <select 
-                                                name="fees_category_{{ tab_id }}" 
+                                                name="fees_category_{{ tab_id }}_{{ i }}" 
                                                 class="form-control" 
                                                 data-summary="Select a category">
                                                 <option value="Select Fee Type">Select Fee Type</option>
@@ -604,7 +611,7 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="text" 
-                                                name="fees_description_{{ tab_id }}" 
+                                                name="fees_description_{{ tab_id }}_{{ i }}" 
                                                 class="form-control" 
                                                 placeholder="Enter description" 
                                                 data-summary="Enter Value">
@@ -614,13 +621,14 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
-                                                name="fees_pepm_{{ tab_id }}" 
+                                                name="fees_pepm_{{ tab_id }}_{{ i }}" 
                                                 class="form-control" 
                                                 step=".01"
                                                 placeholder="Enter PEPM amount" 
                                                 data-summary="Enter Value">
                                         </td>
                                     </tr>
+                                    {% endfor %}
                                 </tbody>
                             </table>
                             
@@ -647,7 +655,8 @@ Plan Overview
                                         <!-- Pooling Level -->
                                         <td>
                                             <input 
-                                                type="text" 
+                                                type="number" 
+                                                step=".01"
                                                 name="pooling_level_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Pooling Level" 
@@ -658,6 +667,7 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
+                                                step=".01"
                                                 name="pooling_fees_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Pooling Fee PEPM" 
@@ -668,6 +678,7 @@ Plan Overview
                                         <td>
                                             <input 
                                                 type="number" 
+                                                step=".01"
                                                 name="rebate_offset_{{ tab_id }}" 
                                                 class="form-control" 
                                                 placeholder="Rx Rebate Offset" 

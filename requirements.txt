@@ -1,0 +1,14 @@
+In the terminal:
+
+conda create --name flask_env python=3.9
+conda activate flask_env
+pip install flask-wtf
+pip install supabase
+set FLASK_APP=app.py
+flask run
+
+
+Database:
+supabase URL https://supabase.com/dashboard/sign-in?returnTo=%2Fsign-in
+supabase login email iannuzziarianna@gmail.com
+password 4H8FUOETgNryaCvm!

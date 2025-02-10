@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Group Structure</h2>
+
+    <form method="POST" action="{{ url_for('save_group_structure', client_id=client_id) }}">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th style="width: 200px;">Plan Name</th>
+                    <th style="width: 150px;">Start Date</th>
+                    <th style="width: 150px;">End Date</th>
+                    <th>Customer Structure 1</th>
+                    <th>Customer Structure 2</th>
+                    <th>Customer Structure 3</th>
+                    <th>Customer Structure 4</th>
+                    <th>Customer Structure 5</th>
+                    <th style="width: 180px;">Rate Description</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="group-structure-body">
+                {% for i in range(5) %}
+                <tr>
+                    <td>
+                        <select class="form-control plan-select" name="plan_id[]">
+                            <option value="">Select Plan</option>
+                            {% for plan in plans %}
+                            <option value="{{ plan.PlanId }}">{{ plan.PlanName }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-control start-date-select" name="start_date[]" disabled>
+                            <option value="">Select Start Date</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select class="form-control end-date-select" name="end_date[]" disabled>
+                            <option value="">Select End Date</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control" name="customer_structure_1[]"></td>
+                    <td><input type="text" class="form-control" name="customer_structure_2[]"></td>
+                    <td><input type="text" class="form-control" name="customer_structure_3[]"></td>
+                    <td><input type="text" class="form-control" name="customer_structure_4[]"></td>
+                    <td><input type="text" class="form-control" name="customer_structure_5[]"></td>
+                    <td>
+                        <select class="form-control rate-description-select" name="rate_description[]" disabled>
+                            <option value="">Select Rate Description</option>
+                        </select>
+                    </td>
+                    <td><button type="button" class="btn btn-danger remove-row">Remove</button></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <button type="button" id="add-row" class="btn btn-primary">Add Row</button>
+        <button type="submit" class="btn btn-success">Save</button>
+    </form>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const premiumData = {{ premium_data | tojson }};
+    console.log("Loaded premiumData:", premiumData);  // Debugging
+
+    // Function to handle plan selection
+    document.querySelectorAll(".plan-select").forEach(select => {
+        select.addEventListener("change", function() {
+            let planId = this.value;
+            let row = this.closest("tr");
+
+            let startDateSelect = row.querySelector(".start-date-select");
+            let endDateSelect = row.querySelector(".end-date-select");
+            let rateDescriptionSelect = row.querySelector(".rate-description-select");
+
+            // Reset all dependent dropdowns when plan changes
+            startDateSelect.innerHTML = '<option value="">Select Start Date</option>';
+            endDateSelect.innerHTML = '<option value="">Select End Date</option>';
+            rateDescriptionSelect.innerHTML = '<option value="">Select Rate Description</option>';
+            startDateSelect.disabled = true;
+            endDateSelect.disabled = true;
+            rateDescriptionSelect.disabled = true;
+
+            if (planId && premiumData[planId]) {
+                console.log(`Selected Plan ID: ${planId}`);
+                console.log("Available Start Dates:", premiumData[planId]["start_dates"]);
+
+                // Populate Start Date dropdown
+                premiumData[planId]["start_dates"].forEach(date => {
+                    startDateSelect.innerHTML += `<option value="${date}">${date}</option>`;
+                });
+
+                startDateSelect.disabled = false;
+            } else {
+                console.warn(`No data found for Plan ID: ${planId}`);
+            }
+        });
+    });
+
+    // Function to handle start date selection
+    document.querySelectorAll(".start-date-select").forEach(select => {
+        select.addEventListener("change", function() {
+            let startDate = this.value;
+            let row = this.closest("tr");
+            let planId = row.querySelector(".plan-select").value;
+
+            let endDateSelect = row.querySelector(".end-date-select");
+            let rateDescriptionSelect = row.querySelector(".rate-description-select");
+
+            // Reset dependent dropdowns when start date changes
+            endDateSelect.innerHTML = '<option value="">Select End Date</option>';
+            rateDescriptionSelect.innerHTML = '<option value="">Select Rate Description</option>';
+            endDateSelect.disabled = true;
+            rateDescriptionSelect.disabled = true;
+
+            if (planId && startDate && premiumData[planId]) {
+                console.log(`Selected Plan ID: ${planId}, Start Date: ${startDate}`);
+                
+                let endDates = premiumData[planId]["end_dates"]?.[startDate] || [];
+                let rateDescriptions = premiumData[planId]["rate_descriptions"]?.[startDate] || [];
+
+                console.log("Available End Dates:", endDates);
+                console.log("Available Rate Descriptions:", rateDescriptions);
+
+                if (endDates.length > 0) {
+                    [...new Set(endDates)].forEach(date => {
+                        endDateSelect.innerHTML += `<option value="${date}">${date}</option>`;
+                    });
+                    endDateSelect.disabled = false;
+                } else {
+                    console.warn(`No end dates found for Plan ID: ${planId}, Start Date: ${startDate}`);
+                }
+
+                if (rateDescriptions.length > 0) {
+                    [...new Set(rateDescriptions)].forEach(desc => {
+                        rateDescriptionSelect.innerHTML += `<option value="${desc}">${desc}</option>`;
+                    });
+                    rateDescriptionSelect.disabled = false;
+                } else {
+                    console.warn(`No rate descriptions found for Plan ID: ${planId}, Start Date: ${startDate}`);
+                }
+            } else {
+                console.warn(`Missing data for Plan ID: ${planId} and Start Date: ${startDate}`);
+            }
+        });
+    });
+
+    // Add new row functionality
+    document.getElementById("add-row").addEventListener("click", function() {
+        let newRow = document.querySelector("#group-structure-body tr").cloneNode(true);
+        newRow.querySelectorAll("input, select").forEach(input => {
+            input.value = "";
+            if (input.tagName === "SELECT") {
+                input.disabled = true;
+            }
+        });
+        document.querySelector("#group-structure-body").appendChild(newRow);
+    });
+
+    // Remove row functionality
+    document.addEventListener("click", function(e) {
+        if (e.target.classList.contains("remove-row")) {
+            e.target.closest("tr").remove();
+        }
+    });
+});
+</script>
+
+{% endblock %}
