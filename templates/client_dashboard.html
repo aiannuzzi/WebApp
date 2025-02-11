@@ -72,6 +72,8 @@ Client Dashboard
     <!-- Build and Edit Buttons -->
     <div class="col-md-6 d-flex justify-content-end align-items-center">
         <a href="{{ url_for('build_init', client_id=client_id, active_plan_names=active_plan_names) }}") }}" class="btn btn-primary btn-lg">Build</a>
+        <a href="{{ url_for('group_structure', client_id=client_id) }}" class="btn btn-primary btn-lg" style="margin-left:5px;">Group Structure </a>
+        
         <button class="btn btn-secondary btn-lg" style="margin:2px;">Edit</button>
     </div>
 </div>

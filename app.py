@@ -1344,8 +1344,8 @@ def save_plan_overview(client_id):
 @app.route('/client/<int:client_id>/group_structure', methods=['GET'])
 def group_structure(client_id):
     try:
-        # Fetch active plans for the client
-        plans_query = supabase.table("Plan").select("PlanId, PlanName").eq("ClientId", client_id).eq("Status", "Active").execute()
+        # Fetch active plans for the client, including Carrier Names and LOC (Product)
+        plans_query = supabase.table("Plan").select("PlanId, PlanName, PrimaryCarrierName, AltCarrierName, LOC").eq("ClientId", client_id).eq("Status", "Active").execute()
         plans = plans_query.data if plans_query.data else []
 
         # Fetch all possible start and end dates for each plan
@@ -1354,8 +1354,18 @@ def group_structure(client_id):
 
         # ✅ Organize premium data by PlanId and StartDate
         premium_data = {}
-        for row in premiums:
+        plan_details = {}  # New dictionary to store Carrier Names and Product (LOC)
+        
+        for row in plans:
             plan_id = str(row["PlanId"])  # Convert to string for JS compatibility
+            plan_details[plan_id] = {
+                "primary_carrier": row["PrimaryCarrierName"],
+                "alt_carrier": row["AltCarrierName"],
+                "product": row["LOC"]
+            }
+
+        for row in premiums:
+            plan_id = str(row["PlanId"])
             start_date = row["StartDate"]
             end_date = row["EndDate"]
             rate_description = row["RateDescription"]
@@ -1392,14 +1402,14 @@ def group_structure(client_id):
         # ✅ Debugging: Print JSON structure to verify correctness
         print("🔍 Final premium_data JSON structure:")
         print(json.dumps(premium_data, indent=4))
+        print("🔍 Final plan_details JSON structure:")
+        print(json.dumps(plan_details, indent=4))
 
-        return render_template("group_structure.html", client_id=client_id, plans=plans, premium_data=premium_data)
+        return render_template("group_structure.html", client_id=client_id, plans=plans, premium_data=premium_data, plan_details=plan_details)
 
     except Exception as e:
         print(f"❌ Error in group_structure route: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
 
 
 @app.route('/client/<int:client_id>/save_group_structure', methods=['POST'])

@@ -11,6 +11,8 @@
                     <th style="width: 200px;">Plan Name</th>
                     <th style="width: 150px;">Start Date</th>
                     <th style="width: 150px;">End Date</th>
+                    <th style="width: 200px;">Carrier Name</th>
+                    <th style="width: 200px;">Product</th>
                     <th>Customer Structure 1</th>
                     <th>Customer Structure 2</th>
                     <th>Customer Structure 3</th>
@@ -41,6 +43,12 @@
                             <option value="">Select End Date</option>
                         </select>
                     </td>
+                    <td>
+                        <select class="form-control carrier-select" name="carrier[]" disabled>
+                            <option value="">Select Carrier</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="form-control product-field" name="product[]" readonly value="Product"></td>
                     <td><input type="text" class="form-control" name="customer_structure_1[]"></td>
                     <td><input type="text" class="form-control" name="customer_structure_2[]"></td>
                     <td><input type="text" class="form-control" name="customer_structure_3[]"></td>
@@ -65,9 +73,10 @@
 <script>
 document.addEventListener("DOMContentLoaded", function() {
     const premiumData = {{ premium_data | tojson }};
-    console.log("Loaded premiumData:", premiumData);  // Debugging
+    const planDetails = {{ plan_details | tojson }};
+    console.log("Loaded premiumData:", premiumData);
+    console.log("Loaded planDetails:", planDetails);
 
-    // Function to handle plan selection
     document.querySelectorAll(".plan-select").forEach(select => {
         select.addEventListener("change", function() {
             let planId = this.value;
@@ -76,18 +85,23 @@ document.addEventListener("DOMContentLoaded", function() {
             let startDateSelect = row.querySelector(".start-date-select");
             let endDateSelect = row.querySelector(".end-date-select");
             let rateDescriptionSelect = row.querySelector(".rate-description-select");
+            let carrierSelect = row.querySelector(".carrier-select");
+            let productField = row.querySelector(".product-field");
 
-            // Reset all dependent dropdowns when plan changes
+            // Reset dependent dropdowns and fields
             startDateSelect.innerHTML = '<option value="">Select Start Date</option>';
             endDateSelect.innerHTML = '<option value="">Select End Date</option>';
             rateDescriptionSelect.innerHTML = '<option value="">Select Rate Description</option>';
+            carrierSelect.innerHTML = '<option value="">Select Carrier</option>';
+            productField.value = "";
+
             startDateSelect.disabled = true;
             endDateSelect.disabled = true;
             rateDescriptionSelect.disabled = true;
+            carrierSelect.disabled = true;
 
             if (planId && premiumData[planId]) {
                 console.log(`Selected Plan ID: ${planId}`);
-                console.log("Available Start Dates:", premiumData[planId]["start_dates"]);
 
                 // Populate Start Date dropdown
                 premiumData[planId]["start_dates"].forEach(date => {
@@ -95,13 +109,21 @@ document.addEventListener("DOMContentLoaded", function() {
                 });
 
                 startDateSelect.disabled = false;
+
+                // Populate Carrier dropdown & Product field
+                if (planDetails[planId]) {
+                    carrierSelect.innerHTML += `<option value="${planDetails[planId]["primary_carrier"]}">${planDetails[planId]["primary_carrier"]}</option>`;
+                    carrierSelect.innerHTML += `<option value="${planDetails[planId]["alt_carrier"]}">${planDetails[planId]["alt_carrier"]}</option>`;
+                    carrierSelect.disabled = false;
+
+                    productField.value = planDetails[planId]["product"];
+                }
             } else {
                 console.warn(`No data found for Plan ID: ${planId}`);
             }
         });
     });
 
-    // Function to handle start date selection
     document.querySelectorAll(".start-date-select").forEach(select => {
         select.addEventListener("change", function() {
             let startDate = this.value;
@@ -111,7 +133,7 @@ document.addEventListener("DOMContentLoaded", function() {
             let endDateSelect = row.querySelector(".end-date-select");
             let rateDescriptionSelect = row.querySelector(".rate-description-select");
 
-            // Reset dependent dropdowns when start date changes
+            // Reset dependent dropdowns
             endDateSelect.innerHTML = '<option value="">Select End Date</option>';
             rateDescriptionSelect.innerHTML = '<option value="">Select Rate Description</option>';
             endDateSelect.disabled = true;
@@ -147,25 +169,6 @@ document.addEventListener("DOMContentLoaded", function() {
                 console.warn(`Missing data for Plan ID: ${planId} and Start Date: ${startDate}`);
             }
         });
-    });
-
-    // Add new row functionality
-    document.getElementById("add-row").addEventListener("click", function() {
-        let newRow = document.querySelector("#group-structure-body tr").cloneNode(true);
-        newRow.querySelectorAll("input, select").forEach(input => {
-            input.value = "";
-            if (input.tagName === "SELECT") {
-                input.disabled = true;
-            }
-        });
-        document.querySelector("#group-structure-body").appendChild(newRow);
-    });
-
-    // Remove row functionality
-    document.addEventListener("click", function(e) {
-        if (e.target.classList.contains("remove-row")) {
-            e.target.closest("tr").remove();
-        }
     });
 });
 </script>
