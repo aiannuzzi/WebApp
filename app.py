@@ -434,6 +434,7 @@ def plan_overview(client_id):
         plan_rate_data=rate_data,
         carriers_by_loc=carriers_by_loc,
         csrf_token=csrf_token
+        
     )
 
 @app.route('/client/<int:client_id>/save_plans', methods=['POST'])
@@ -1343,6 +1344,7 @@ def save_plan_overview(client_id):
 
 @app.route('/client/<int:client_id>/group_structure', methods=['GET'])
 def group_structure(client_id):
+    csrf_token = generate_csrf()
     try:
         # Fetch active plans for the client, including Carrier Names and LOC (Product)
         plans_query = supabase.table("Plan").select("PlanId, PlanName, PrimaryCarrierName, AltCarrierName, LOC").eq("ClientId", client_id).eq("Status", "Active").execute()
@@ -1405,17 +1407,149 @@ def group_structure(client_id):
         print("🔍 Final plan_details JSON structure:")
         print(json.dumps(plan_details, indent=4))
 
-        return render_template("group_structure.html", client_id=client_id, plans=plans, premium_data=premium_data, plan_details=plan_details)
+        return render_template("group_structure.html", client_id=client_id, plans=plans, premium_data=premium_data, plan_details=plan_details, csrf_token=csrf_token)
 
     except Exception as e:
         print(f"❌ Error in group_structure route: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
+
 @app.route('/client/<int:client_id>/save_group_structure', methods=['POST'])
 def save_group_structure(client_id):
-    # Process form data and save to the database
-    return redirect(url_for('client_dashboard', client_id=client_id))
+    """
+    Processes form data, saves group structures, checks for duplicates,
+    and maps them to the correct PremiumId(s).
+    """
+    try:
+        # ✅ Step 1: Extract Data from Form (Handling Multiple Rows)
+        form_data = request.form.to_dict(flat=False)
+        print("📌 Received Form Data:", form_data)  # Debugging
+
+        group_structures = []
+
+        # ✅ Step 2: Loop through multiple form rows
+        for i in range(len(form_data["PlanId[]"])):  
+            group_structures.append({
+                "PlanId": int(form_data["PlanId[]"][i]),
+                "CarrierName": form_data["CarrierName[]"][i],
+                "Product": form_data["Product[]"][i],
+                "Customer_structure_1": form_data["Customer_structure_1[]"][i],
+                "Customer_structure_2": form_data["Customer_structure_2[]"][i],
+                "Customer_structure_3": form_data["Customer_structure_3[]"][i],
+                "Customer_structure_4": form_data["Customer_structure_4[]"][i],
+                "Customer_structure_5": form_data["Customer_structure_5[]"][i],
+                "RateDescription": form_data["RateDescription[]"][i]
+            })
+
+        print("✅ Extracted Group Structures:", group_structures)  # Debugging
+
+        # ✅ Step 3: Process Group Structures & Link to Premiums
+        process_group_structures(client_id, group_structures)
+
+        return redirect(url_for('client_dashboard', client_id=client_id))
+
+    except Exception as e:
+        print(f"❌ Error processing group structures: {str(e)}")
+        return redirect(url_for('client_dashboard', client_id=client_id))
+
+def process_group_structures(client_id, group_data):
+    """
+    Uploads group structures, ensures no duplicates, and links them to Premiums.
+    
+    :param client_id: The ID of the client.
+    :param group_data: A list of dictionaries containing group structure details.
+    """
+    gs_mapping = {}  # Stores PlanId -> GSId mapping
+    inserted_gs_ids = []  # Track inserted GSIds
+
+    for entry in group_data:
+        plan_id = entry["PlanId"]
+        carrier_name = entry["CarrierName"]
+        product = entry["Product"]
+        cs_1, cs_2, cs_3, cs_4, cs_5 = (
+            entry["Customer_structure_1"],
+            entry["Customer_structure_2"],
+            entry["Customer_structure_3"],
+            entry["Customer_structure_4"],
+            entry["Customer_structure_5"],
+        )
+        rate_description = entry["RateDescription"]
+
+        # ✅ Step 1: Check for Existing Group Structure
+        existing_gs = supabase.table("Group_Structure").select("GSId").eq("PlanId", plan_id)\
+            .eq("CarrierName", carrier_name).eq("Product", product)\
+            .eq("Customer_structure_1", cs_1).eq("Customer_structure_2", cs_2)\
+            .eq("Customer_structure_3", cs_3).eq("Customer_structure_4", cs_4)\
+            .eq("Customer_structure_5", cs_5).eq("RateDescription", rate_description).execute()
+
+        if existing_gs.data:
+            gs_id = existing_gs.data[0]["GSId"]
+            print(f"✅ Group Structure Exists: GSId {gs_id}")
+        else:
+            # ✅ Step 2: Insert New Group Structure
+            new_gs = supabase.table("Group_Structure").insert({
+                "ClientId": client_id,
+                "PlanId": plan_id,
+                "CarrierName": carrier_name,
+                "Product": product,
+                "Customer_structure_1": cs_1,
+                "Customer_structure_2": cs_2,
+                "Customer_structure_3": cs_3,
+                "Customer_structure_4": cs_4,
+                "Customer_structure_5": cs_5,
+                "RateDescription": rate_description
+            }).execute()
+            
+            gs_id = new_gs.data[0]["GSId"]
+            print(f"✅ Inserted New Group Structure: GSId {gs_id}")
+            inserted_gs_ids.append(gs_id)
+
+        gs_mapping.setdefault(plan_id, {})[rate_description] = gs_id
+ 
+
+    # ✅ Step 3: Link GSId to PremiumId(s) (Fix: Pass `group_data` as an argument)
+    insert_gs_premium_links(gs_mapping, group_data)
+
+
+def insert_gs_premium_links(gs_mapping, group_data):
+    """
+    Links GSId to the correct PremiumId(s) based on PlanId, StartDate, EndDate, and RateDescription.
+    
+    :param gs_mapping: Dictionary mapping PlanId -> {RateDescription: GSId}.
+    :param group_data: List of group structures containing RateDescription.
+    """
+    for entry in group_data:
+        plan_id = entry["PlanId"]
+        rate_description = entry["RateDescription"] # ✅ Convert to lowercase
+
+        # ✅ Make sure GSId is fetched correctly per RateDescription
+        gs_id = gs_mapping.get(plan_id, {}).get(rate_description, None)
+        if not gs_id:
+            print(f"⚠️ No GSId found for PlanId {plan_id} and RateDescription '{rate_description}'")
+            continue
+
+        # ✅ Query Premium table and filter by RateDescription (case-insensitive)
+        premium_query = supabase.table("Premium").select("PremiumId", "StartDate", "EndDate", "RateDescription")\
+            .eq("PlanId", plan_id)\
+            .eq("RateDescription", rate_description).execute()
+
+        if premium_query.data:
+            for premium in premium_query.data:
+                premium_id = premium["PremiumId"]
+                start_date = premium["StartDate"]
+                end_date = premium["EndDate"]
+
+                # ✅ Insert into GS_Plan_Year_Rates table
+                response = supabase.table("GS Plan Year Rates").insert({
+                    "GSId": gs_id,
+                    "PremiumId": premium_id
+                }).execute()
+
+                print(f"✅ Linked GSId {gs_id} to PremiumId {premium_id} (PlanId {plan_id}, {start_date} - {end_date}, RateDescription: {rate_description})")
+        else:
+            print(f"⚠️ No matching PremiumId found for PlanId {plan_id} and RateDescription '{rate_description}'")
+
 
 
 if __name__ == '__main__':
